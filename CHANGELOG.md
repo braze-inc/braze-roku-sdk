@@ -2,14 +2,15 @@
 
 ##### Added
 
-- Added field `BrazeTask.BrazeInAppMessage` for InAppMessages.
-- Added `LogInAppMessageImpression`, `LogInAppMessageButtonClick`, and `LogInAppMessageClick` to BrazeSDK
+- Added support for receiving In-App Messaging model data.
+- Added field `BrazeTask.BrazeInAppMessage` for In-App Messages.
+- Added `LogInAppMessageImpression`, `LogInAppMessageButtonClick`, and `LogInAppMessageClick` to `BrazeSDK`.
 
 ## 0.0.4
 
 ##### Changed
 
-- Replaced the `GetModel` method with the more precise `GetModelDetails().ModelNumber`
+- Replaced the `GetModel` method with the more precise `GetModelDetails().ModelNumber`.
 
 ##### Fixed
 
