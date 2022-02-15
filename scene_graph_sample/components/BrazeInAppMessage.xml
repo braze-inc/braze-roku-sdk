@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component name="BrazeInAppMessage" extends="StandardDialog" initialFocus="buttonArea" >
+<interface>
+   <field id="inappmessage" type="assocarray" alwaysNotify="true" />
+   <field id="BrazeTask" type="node"/>
+</interface>    
+
+<children>
+    <StdDlgTitleArea id="inappmessageheader"/>
+    <StdDlgContentArea>
+        <StdDlgGraphicItem id="inappmessageimage" graphicAlign="center_above" />
+        <StdDlgTextItem id="inappmessagebody" />
+    </StdDlgContentArea>
+    <StdDlgButtonArea id="inappmessagebuttonArea">
+        <StdDlgButton id="inappmessagebutton1" />
+        <StdDlgButton id="inappmessagebutton2" />
+    </StdDlgButtonArea>
+</children>
+  <script type="text/brightscript" uri="pkg:/components/BrazeInAppMessage.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/BrazeSDK.brs"/>
+</component>
