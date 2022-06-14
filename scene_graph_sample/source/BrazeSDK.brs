@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "0.1.0"
+    SDK_VERSION: "0.1.1"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -32,7 +32,7 @@ function BrazeConstants() as object
 
   BRAZE_EVENT_API_FIELDS = {
     CUSTOM_EVENT_NAME: "n",
-    SESSION_END_EVENT_PROPERTIES: "d",
+    SESSION_DURATION: "d",
     CUSTOM_EVENT_PROPERTIES: "p",
     PURCHASE_EVENT_PROPERTIES: "pr",
     PRODUCT_ID: "pid",
@@ -95,7 +95,10 @@ function BrazeConstants() as object
     CLICK_ACTION: "click_action",
     ID: "id",
     TEXT: "text",
-    URI: "uri"
+    URI: "uri",
+    BG_COLOR: "bg_color",
+    BORDER_COLOR: "border_color",
+    TEXT_COLOR: "text_color"
   }
 
   TRIGGER_CONDITION_FIELDS = {
@@ -328,7 +331,7 @@ function BrazeInit(config as object, messagePort as object)
         utils = Braze()._privateApi.brazeUtils
         m.cachedConfig = {}
         stored_config_time = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
-        config_object = eventHandler.createConfigObject(stored_config_time)
+        config_object = eventHandler.createConfigObject(stored_config_time, true)
         config_response = invalid
         raw_response = eventHandler.requestConfig(config_object)
         if raw_response <> invalid
@@ -381,7 +384,9 @@ function BrazeInit(config as object, messagePort as object)
         storage = Braze()._privateApi.storage
         utils = Braze()._privateApi.brazeUtils
         stored_config_time = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
-        config_object = eventHandler.createConfigObject(stored_config_time)
+
+        get_triggers = m.cachedconfig.triggers = invalid
+        config_object = eventHandler.createConfigObject(stored_config_time, get_triggers)
         config_response = invalid
         raw_response = eventHandler.requestConfig(config_object)
         if raw_response <> invalid
@@ -409,7 +414,7 @@ function BrazeInit(config as object, messagePort as object)
           m.cachedConfig.purchases_blocklist = config_purchases_blocklist
           m.cachedConfig.messaging_session_timeout = config_messaging_session_timeout
         end if
-        if config_response <> invalid and config_response.triggers <> invalid
+        if get_triggers and config_response <> invalid and config_response.triggers <> invalid
           m.cachedConfig.triggers = config_response.triggers
         end if
       end if
@@ -580,6 +585,7 @@ function BrazeInit(config as object, messagePort as object)
       return result
     end function,
 
+    ' Convert the trigger to an In-App Message object that the users will use to create the In-App Message UI
     transformTrigger: function(trigger as object) as object
       transformed_trigger = {}
       transformed_trigger.message = trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.MESSAGE]
@@ -594,12 +600,12 @@ function BrazeInit(config as object, messagePort as object)
       transformed_trigger.dismiss_type = trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.MESSAGE_CLOSE]
       transformed_trigger.message_type = trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.TYPE]
 
-      transformed_trigger.bg_color = m.toColor(stri(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.BG_COLOR], 16))
-      transformed_trigger.close_button_color = m.toColor(stri(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.CLOSE_BTN_COLOR], 16))
-      transformed_trigger.frame_color = m.toColor(stri(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.FRAME_COLOR], 16))
-      transformed_trigger.header_text_color = m.toColor(stri(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.HEADER_TEXT_COLOR], 16))
+      transformed_trigger.bg_color = m.toColor(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.BG_COLOR])
+      transformed_trigger.close_button_color = m.toColor(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.CLOSE_BTN_COLOR])
+      transformed_trigger.frame_color = m.toColor(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.FRAME_COLOR])
+      transformed_trigger.header_text_color = m.toColor(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.HEADER_TEXT_COLOR])
       transformed_trigger.text_align = trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.TEXT_ALIGN]
-      transformed_trigger.message_text_color = m.toColor(stri(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.MESSAGE_TEXT_COLOR], 16))
+      transformed_trigger.message_text_color = m.toColor(trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.MESSAGE_TEXT_COLOR])
       transformed_trigger.display_delay = trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.DISPLAY_DELAY]
 
       raw_buttons = trigger[BrazeConstants().TRIGGER_FIELDS.DATA][BrazeConstants().TRIGGER_DATA_FIELDS.BTNS]
@@ -611,6 +617,9 @@ function BrazeInit(config as object, messagePort as object)
           transformed_button.click_action = button[BrazeConstants().TRIGGER_DATA_BTN_FIELDS.CLICK_ACTION]
           transformed_button.uri = button[BrazeConstants().TRIGGER_DATA_BTN_FIELDS.URI]
           transformed_button.id = button[BrazeConstants().TRIGGER_DATA_BTN_FIELDS.ID]
+          transformed_button.bg_color = m.toColor(button[BrazeConstants().TRIGGER_DATA_BTN_FIELDS.BG_COLOR])
+          transformed_button.border_color = m.toColor(button[BrazeConstants().TRIGGER_DATA_BTN_FIELDS.BORDER_COLOR])
+          transformed_button.text_color = m.toColor(button[BrazeConstants().TRIGGER_DATA_BTN_FIELDS.TEXT_COLOR])
           transformed_trigger.buttons.Push(transformed_button)
         end for
       end if
@@ -776,7 +785,11 @@ function BrazeInit(config as object, messagePort as object)
       return false
     end function,
 
-    toColor: function(hex as string) as string
+    toColor: function(s as object) as dynamic
+      if s = invalid 
+        return invalid
+      end if
+      hex = stri(s, 16)
       return "0x" + Right(hex, 6) + Left(hex, 2)
     end function,
   }
@@ -868,14 +881,14 @@ function BrazeInit(config as object, messagePort as object)
       return attribute_object
     end function,
 
-    createConfigObject: function(config_time as integer) as object
+    createConfigObject: function(config_time as integer, get_triggers as boolean) as object
       config_object = {}
       user_id = Braze()._privateApi.dataProvider.UserIdProvider()
       if user_id <> "" then
         config_object["user_id"] = user_id
       end if
       config_object["config"] = { config_time: config_time }
-      config_object["triggers"] = true
+      config_object["triggers"] = get_triggers
       return config_object
     end function,
 
@@ -936,9 +949,13 @@ function BrazeInit(config as object, messagePort as object)
       json.Append(required_fields)
       endpoint = Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.ENDPOINT] + "api/v3/data"
       headers = [
-        { key: "X-Braze-DataRequest", value: "true" },
-        { key: "X-Braze-TriggersRequest", value: "true" }
+        { key: "X-Braze-DataRequest", value: "true" }
       ]
+      if config_object.triggers = true
+        triggerHeader = { key: "X-Braze-TriggersRequest", value: "true" }
+        headers.Push(triggerHeader)
+      end if
+
       server_response = Braze()._privateApi.networkUtil.postToUrl(endpoint, json, headers)
       return server_response
     end function,
@@ -1204,7 +1221,15 @@ function BrazeInit(config as object, messagePort as object)
       m._privateapi.dataprovider.ConfigProvider()
       active_trigger = m._privateApi.brazeUtils.checkAgainstTriggers("open", m._privateapi.dataprovider.ConfigProvider().triggers)
       if active_trigger <> invalid
-        active_trigger = m._privateapi.brazeutils.updateTriggerWithTemplate(active_trigger, "open")
+        if active_trigger.is_control = true
+          m.logIAMControlImpression({ key: "trigger_id", value: active_trigger.trigger_id })
+          return
+        end if
+        active_trigger = m._privateapi.brazeutils.updateTriggerWithTemplate(active_trigger, "open", { user_id: m._privateapi.dataprovider.cachedUserId })
+        if active_trigger = invalid
+          ' TODO: If this is invalid, grab the next one
+          return
+        end if
         active_trigger.delete("template_only")
         active_trigger.id = active_trigger.trigger_id
         active_trigger.delete("trigger_id")
@@ -1230,7 +1255,7 @@ function BrazeInit(config as object, messagePort as object)
           duration = end_time - start_time
         end if
         data = {}
-        data[BrazeConstants().BRAZE_EVENT_API_FIELDS.SESSION_END_EVENT_PROPERTIES] = duration
+        data[BrazeConstants().BRAZE_EVENT_API_FIELDS.SESSION_DURATION] = duration
         event_object = m._privateApi.eventHandler.createEventObject(BrazeConstants().EVENT_TYPES.SESSION_END, data)
         event_object["session_id"] = previous_session
         m._privateApi.eventHandler.logEvent(event_object)
@@ -1248,10 +1273,13 @@ function BrazeInit(config as object, messagePort as object)
       user_id = args["user_id"]
       if user_id <> m._privateapi.dataprovider.cachedUserId then
         m._privateApi.brazeLogger.debug("userid changed", "")
+        m.sessionEnd({})
         storage = m._privateApi.storage
         storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.USER_ID_KEY, BrazeConstants().BRAZE_STORAGE.USER_ID_SECTION, user_id)
         m._privateapi.dataprovider.cachedUserId = user_id
+        m._privateapi.dataprovider.cachedconfig.triggers = invalid
         m._privateApi.dataProvider.sync()
+        m.sessionStart({})
       else
         m._privateApi.brazeLogger.debug("userid not changed", "")
       end if  

@@ -133,14 +133,32 @@ sub OnButtonSelected()
   end if
 end sub
 
+sub reclaimFocus()
+  m.top.removeChild(m.customMsg)
+  m.customMsg = invalid
+  m.buttonGroup.SetFocus(true)
+end sub
+
 sub onInAppMessageTriggered()
   in_app_message = m.BrazeTask.BrazeInAppMessage
   if in_app_message <> invalid and in_app_message.message <> invalid
-    ' If in_app_message.display_delay <> 0, then handle the delay (value is in seconds)
-    dialog = createObject("roSGNode", "BrazeInAppMessage")
-    dialog.BrazeTask = m.Braze.BrazeTask
-    dialog.inappmessage = in_app_message
-    m.top.dialog = dialog
+    ' If we have a KVP of "msgtype" with a value of "sidebyside", that means we want to render this
+    ' using the "CustomSideBySideInAppMessage" object. We could have multiple types of custom
+    ' In App Messages supported
+    if in_app_message.extras <> invalid and in_app_message.extras.msgtype = "sidebyside"
+      m.customMsg = CreateObject("roSGNode", "CustomSideBySideInAppMessage")
+      m.top.appendChild(m.customMsg)
+      m.customMsg.BrazeTask = m.Braze.BrazeTask
+      m.customMsg.inappmessage = in_app_message
+      m.customMsg.setFocus(true)
+      m.customMsg.ObserveField("isClosed", "reclaimFocus")
+    else
+      ' Our default In App Message. This happens to be based on a Roku Dialog
+      dialog = createObject("roSGNode", "BrazeInAppMessage")
+      dialog.BrazeTask = m.Braze.BrazeTask
+      dialog.inappmessage = in_app_message
+      m.top.dialog = dialog
+    end if
+    m.BrazeTask.BrazeInAppMessage = invalid
   end if
-  m.BrazeTask.BrazeInAppMessage = invalid
 end sub

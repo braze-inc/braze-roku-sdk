@@ -29,8 +29,8 @@ end sub
 sub ConfigureBrazeSdk(globalNode as object)
   config = {}
   config_fields = BrazeConstants().BRAZE_CONFIG_FIELDS
-  config[config_fields.API_KEY] = "746ed6eb-40c8-4d1c-bce5-6239a19ddf02"
+  config[config_fields.API_KEY] = "5c636baa-dfa4-453a-9484-cb6dc7727988"
   config[config_fields.ENDPOINT] = "https://sondheim.appboy.com/"
-  config[config_fields.HEARTBEAT_FREQ_IN_SECONDS] = 5
+  config[config_fields.HEARTBEAT_FREQ_IN_SECONDS] = 30
   globalNode.AddFields({ brazeConfig: config })
 end sub

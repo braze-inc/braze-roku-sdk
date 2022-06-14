@@ -1,3 +1,18 @@
+## 0.1.1
+
+##### Added
+
+- Style data on buttons in In-App messages is now available. See `README.md` for more information.
+
+##### Changed
+
+- Get In-App Message triggers at the start of session to match other SDKs.
+
+##### Fixed
+
+- Fix issues with messages that re-evaluate campaign eligibility before displaying.
+- Fixed issues with users in the control group
+
 ## 0.1.0
 
 ##### Added

@@ -85,6 +85,9 @@ Button fields include:
 - `buttons[0].id` - The ID value of the button itself
 - `buttons[0].text` - The text to display on the button
 - `buttons[0].uri` - When `click_action` is "URI", this should be displayed
+- `buttons[0].bg_color` - Button background color
+- `buttons[0].border_color` - Button border color
+- `buttons[0].text_color` - Button text color
 
 When a message is displayed or seen, log an impression:
 
