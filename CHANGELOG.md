@@ -10,8 +10,9 @@
 
 ##### Fixed
 
-- Fix issues with messages that re-evaluate campaign eligibility before displaying.
-- Fixed issues with users in the control group
+- Fixed issues with messages that re-evaluate campaign eligibility before displaying.
+- Fixed issues with users in the control group.
+- Fixed issue where new session wasn't started when changing users.
 
 ## 0.1.0
 
