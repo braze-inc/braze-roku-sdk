@@ -29,8 +29,6 @@ sub setupBrazeSdk()
         method_arguments = payload.arguments
         m.braze[method_name](method_arguments)
       end if
-    else 
-      m.braze._privateApi.dataProvider.sync()
     end if
   end while
 end sub

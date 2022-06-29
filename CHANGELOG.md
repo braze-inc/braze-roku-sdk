@@ -1,3 +1,9 @@
+## 0.1.2
+
+##### Fixed
+
+- Reduced the number of superfluous requests to Braze servers.
+
 ## 0.1.1
 
 ##### Added

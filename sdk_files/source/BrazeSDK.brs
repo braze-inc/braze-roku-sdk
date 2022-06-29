@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "0.1.1"
+    SDK_VERSION: "0.1.2"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -278,7 +278,6 @@ function BrazeInit(config as object, messagePort as object)
         m.cachedAppInfo = {
           sdk_version: BrazeConstants().SDK_DATA.SDK_VERSION
           api_key: Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.API_KEY]
-          endpoint: Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.ENDPOINT]
         }
       end if
       return m.cachedAppInfo
@@ -333,7 +332,7 @@ function BrazeInit(config as object, messagePort as object)
         stored_config_time = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
         config_object = eventHandler.createConfigObject(stored_config_time, true)
         config_response = invalid
-        raw_response = eventHandler.requestConfig(config_object)
+        raw_response = eventHandler.requestConfigAndTriggers(config_object)
         if raw_response <> invalid
           config_response = ParseJson(raw_response)
         end if
@@ -377,18 +376,16 @@ function BrazeInit(config as object, messagePort as object)
       return m.cachedConfig
     end function
     
-    sync: function()
+    syncForNewUser: function()
       config = m.ConfigProvider()
       if config <> invalid then
         eventHandler = Braze()._privateApi.eventHandler
         storage = Braze()._privateApi.storage
         utils = Braze()._privateApi.brazeUtils
         stored_config_time = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
-
-        get_triggers = m.cachedconfig.triggers = invalid
-        config_object = eventHandler.createConfigObject(stored_config_time, get_triggers)
+        config_object = eventHandler.createConfigObject(stored_config_time, true)
         config_response = invalid
-        raw_response = eventHandler.requestConfig(config_object)
+        raw_response = eventHandler.requestConfigAndTriggers(config_object)
         if raw_response <> invalid
           config_response = ParseJson(raw_response)
         end if
@@ -414,7 +411,7 @@ function BrazeInit(config as object, messagePort as object)
           m.cachedConfig.purchases_blocklist = config_purchases_blocklist
           m.cachedConfig.messaging_session_timeout = config_messaging_session_timeout
         end if
-        if get_triggers and config_response <> invalid and config_response.triggers <> invalid
+        if config_response <> invalid and config_response.triggers <> invalid
           m.cachedConfig.triggers = config_response.triggers
         end if
       end if
@@ -881,14 +878,14 @@ function BrazeInit(config as object, messagePort as object)
       return attribute_object
     end function,
 
-    createConfigObject: function(config_time as integer, get_triggers as boolean) as object
+    createConfigObject: function(config_time as integer, request_triggers as boolean) as object
       config_object = {}
       user_id = Braze()._privateApi.dataProvider.UserIdProvider()
       if user_id <> "" then
         config_object["user_id"] = user_id
       end if
       config_object["config"] = { config_time: config_time }
-      config_object["triggers"] = get_triggers
+      config_object["triggers"] = request_triggers
       return config_object
     end function,
 
@@ -941,20 +938,17 @@ function BrazeInit(config as object, messagePort as object)
       server_response = Braze()._privateApi.networkUtil.postToUrl(endpoint, json)
     end function,
 
-    requestConfig: function(config_object as object)
+    requestConfigAndTriggers: function(config_object as object)
       json = {
         "respond_with": config_object
       }
-      required_fields = Braze()._privateApi.networkUtil.generateRequiredRequestFields()
+      required_fields = Braze()._privateApi.networkUtil.generateRequiredRequestFields(true)
       json.Append(required_fields)
       endpoint = Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.ENDPOINT] + "api/v3/data"
       headers = [
-        { key: "X-Braze-DataRequest", value: "true" }
+        { key: "X-Braze-DataRequest", value: "true" },
+        { key: "X-Braze-TriggersRequest", value: "true" }
       ]
-      if config_object.triggers = true
-        triggerHeader = { key: "X-Braze-TriggersRequest", value: "true" }
-        headers.Push(triggerHeader)
-      end if
 
       server_response = Braze()._privateApi.networkUtil.postToUrl(endpoint, json, headers)
       return server_response
@@ -964,12 +958,15 @@ function BrazeInit(config as object, messagePort as object)
       if data = invalid
         data = {}
       end if
+      stored_config_time = Braze()._privateApi.storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+      config_object = Braze()._privateApi.eventHandler.createConfigObject(stored_config_time, false)
       json = {
         "template": {
           "trigger_id": trigger_id,
           "trigger_event_type": trigger_event_type,
           "data": data
-        }
+        },
+        "respond_with": config_object
       }
       required_fields = Braze()._privateApi.networkUtil.generateRequiredRequestFields()
       json.Append(required_fields)
@@ -1012,18 +1009,24 @@ function BrazeInit(config as object, messagePort as object)
     end function,
 
 
-    generateRequiredRequestFields: function() as object
+    generateRequiredRequestFields: function(include_device = false as boolean) as object
       request_fields = {}
-      device_object = Braze()._privateApi.dataProvider.DeviceDataProvider()
       app_object = Braze()._privateApi.dataProvider.AppDataProvider()
       current_time = Braze()._privateApi.timeUtils.getCurrentTimeSeconds()
       device_id = Braze()._privateApi.dataProvider.DeviceIdProvider()
       request_fields.Append(app_object)
       request_fields.Append({
         "time": current_time,
-        "device_id": device_id,
-        "device": device_object
+        "device_id": device_id
       })
+
+      if (include_device)
+        device_object = Braze()._privateApi.dataProvider.DeviceDataProvider()
+        request_fields.Append({
+          "device": device_object
+        })
+      end if
+
       return request_fields
     end function
   }
@@ -1278,7 +1281,7 @@ function BrazeInit(config as object, messagePort as object)
         storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.USER_ID_KEY, BrazeConstants().BRAZE_STORAGE.USER_ID_SECTION, user_id)
         m._privateapi.dataprovider.cachedUserId = user_id
         m._privateapi.dataprovider.cachedconfig.triggers = invalid
-        m._privateApi.dataProvider.sync()
+        m._privateApi.dataProvider.syncForNewUser()
         m.sessionStart({})
       else
         m._privateApi.brazeLogger.debug("userid not changed", "")
