@@ -22,6 +22,9 @@
 
 ## 0.1.0
 
+##### ⚠️ Known Issues
+- This release contains a known issue with in-app message syncing. Do not use this version and upgrade to 0.1.1+ instead.
+
 ##### Added
 
 - Added support for receiving In-App Messaging model data.
