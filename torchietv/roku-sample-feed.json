@@ -1,0 +1,406 @@
+{
+	"Configuration": {
+		"mediaType": "show",
+		"order": 1,
+		"data": [
+			{
+				"longDescription": "Show the Braze configuration. Will display warning if a reboot is needed.",
+				"thumbnail": "pkg:/images/showconfig.png",
+				"id": "brazeshowconfig",
+				"shortDescription": "Show config",
+				"title": "Show Config",
+				"braze": {
+					"action": "showconfig"
+				}
+			},
+			{
+				"longDescription": "Set User ID of your Braze user. This will start a new session.",
+				"thumbnail": "pkg:/images/setuserid.png",
+				"id": "brazesetuserid",
+				"shortDescription": "The the Braze User ID",
+				"title": "Set User ID",
+				"braze": {
+					"action": "setuserid"
+				}
+			},
+			{
+				"longDescription": "Set API Key. You'll need to restart afterwards. If you use the Roku app on your phone, you can copy and paste through the virtual remote.",
+				"thumbnail": "pkg:/images/setapikey.png",
+				"id": "shortform-roku-streaming-overview",
+				"shortDescription": "Set the Braze API key",
+				"title": "Set API Key",
+				"braze": {
+					"action": "setapikey"
+				}
+			},
+			{
+				"longDescription": "Set Endpoint. You'll need to restart afterwards",
+				"thumbnail": "pkg:/images/setendpoint.png",
+				"id": "shortform-roku-streaming-overview",
+				"shortDescription": "Set the Braze endpoint",
+				"title": "Set Endpoint",
+				"braze": {
+					"action": "setendpoint"
+				}
+			}
+		]
+	},
+	"Analytics": {
+		"mediaType": "series",
+		"order": 2,
+		"data": [
+			{
+				"id": "event-1",
+				"title": "Quick Event 1",
+				"episodeNumber": 1,
+				"thumbnail": "pkg:/images/logevent.png",
+				"shortDescription": "Event 1",
+				"longDescription": "Event 1",
+				"braze": {
+					"action": "logevent",
+					"event": {
+						"eventName": "event1"
+					}
+				}
+			},
+			{
+				"id": "purchase",
+				"title": "Quick Purchase",
+				"episodeNumber": 1,
+				"thumbnail": "pkg:/images/logpurchase.png",
+				"shortDescription": "Log a purchase",
+				"longDescription": "Log a purchase for item 'purchase1' with extra details",
+				"braze": {
+					"action": "logpurchase",
+					"purchase": {
+						"purchaseName": "purchase1",
+						"currency": "USD",
+						"price": 5.25,
+						"quantity": 1,
+						"purchaseData": { "stringPropKey1": "stringPropValue1", "intProp": 9001, "boolProp": true }
+					}
+				}
+			},
+			{
+				"id": "events",
+				"title": "Braze Events & Purchases",
+				"releaseDate": "2020-03-15T02:01:00+02:00",
+				"shortDescription": "Send Events & Purchases to Braze",
+				"thumbnail": "pkg:/images/logeventsandpurchases.png",
+				"seasons": [
+					{
+						"title": "Events",
+						"episodes": [
+							{
+								"id": "event-1",
+								"title": "Event 1",
+								"episodeNumber": 1,
+								"thumbnail": "pkg:/images/logevent.png",
+								"shortDescription": "Event 1",
+								"longDescription": "Event 1",
+								"braze": {
+									"action": "logevent",
+									"event": {
+										"eventName": "event1"
+									}
+								}
+							},
+							{
+								"id": "event-2",
+								"title": "Event 2",
+								"episodeNumber": 2,
+								"thumbnail": "pkg:/images/logevent.png",
+								"shortDescription": "Event 2",
+								"longDescription": "Event 2",
+								"braze": {
+									"action": "logevent",
+									"event": {
+										"eventName": "event2",
+										"eventData": { "stringPropKey1": "stringPropValue1", "intProp": 9001, "boolProp": true }
+									}
+								}
+							}
+						]
+					},
+					{
+						"title": "Braze Purchases",
+						"episodes": [
+							{
+								"id": "purchase",
+								"title": "Purchase 1",
+								"episodeNumber": 1,
+								"thumbnail": "pkg:/images/logpurchase.png",
+								"shortDescription": "Log a purchase",
+								"longDescription": "Log a purchase for item 'purchase1' with no other details",
+								"braze": {
+									"action": "logpurchase",
+									"purchase": {
+										"purchaseName": "purchase1",
+										"currency": "USD",
+										"price": 5.25,
+										"quantity": 1
+									}
+								}
+							},
+							{
+								"id": "purchase",
+								"title": "Purchase 2",
+								"episodeNumber": 1,
+								"thumbnail": "pkg:/images/logpurchase.png",
+								"shortDescription": "Log a purchase",
+								"longDescription": "Log a purchase for item 'purchase1' with extra details",
+								"braze": {
+									"action": "logpurchase",
+									"purchase": {
+										"purchaseName": "purchase1",
+										"currency": "USD",
+										"price": 5.25,
+										"quantity": 1,
+										"purchaseData": { "stringPropKey1": "stringPropValue1", "intProp": 9001, "boolProp": true }
+									}
+								}
+							}
+						]
+					}
+				]
+			},
+			{
+				"id": "attributes",
+				"title": "Attributes",
+				"releaseDate": "2020-03-15T02:01:00+02:00",
+				"shortDescription": "Set attributes on your current Braze user",
+				"thumbnail": "pkg:/images/setattribute.png",
+				"seasons": [
+					{
+						"title": "First Name",
+						"episodes": [
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set First Name to 'Alice'",
+								"episodeNumber": 1,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set First Name to 'Alice'",
+								"longDescription": "Set your Braze user's first name to 'Alice'",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "firstname",
+										"value": "Alice"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set First Name to 'Bob'",
+								"episodeNumber": 2,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set First Name to 'Bob'",
+								"longDescription": "Set your Braze user's first name to 'Bob'",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "firstname",
+										"value": "Bob"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set First Name to 'Charlie'",
+								"episodeNumber": 3,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set First Name to 'Charlie'",
+								"longDescription": "Set your Braze user's first name to 'Charlie'",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "firstname",
+										"value": "Charlie"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set First Name to empty string",
+								"episodeNumber": 4,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set First Name to empty string",
+								"longDescription": "Set your Braze user's first name to empty string",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "firstname",
+										"value": ""
+									}
+								}
+							}
+						]
+					},
+					{
+						"title": "Last Name",
+						"episodes": [
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set Last Name to 'Anderson'",
+								"episodeNumber": 1,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set First Name to 'Anderson'",
+								"longDescription": "Set your Braze user's last name to 'Anderson'",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "lastname",
+										"value": "Anderson"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set Last Name to 'Baker'",
+								"episodeNumber": 2,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set Last Name to 'Baker'",
+								"longDescription": "Set your Braze user's last name to 'Baker'",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "lastname",
+										"value": "Baker"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set Last Name to 'Charlie'",
+								"episodeNumber": 3,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set Last Name to 'Charlie'",
+								"longDescription": "Set your Braze user's last name to 'Charlie'",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "lastname",
+										"value": "Charlie"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set Last Name to empty string",
+								"episodeNumber": 4,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set Last Name to empty string",
+								"longDescription": "Set your Braze user's last name to empty string",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "lastname",
+										"value": ""
+									}
+								}
+							}
+						]
+					},
+					{
+						"title": "Email",
+						"episodes": [
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set email to braze@foo.com",
+								"episodeNumber": 1,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set email to braze@foo.com",
+								"longDescription": "Set your Braze user's email to braze@foo.com",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "email",
+										"value": "braze@foo.com"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set email to braze@bar.com",
+								"episodeNumber": 2,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set email to braze@bar.com",
+								"longDescription": "Set your Braze user's email to braze@bar.com",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "email",
+										"value": "braze@bar.com"
+									}
+								}
+							},
+							{
+								"id": "rsg_unit1_intro",
+								"title": "Set email to empty string",
+								"episodeNumber": 2,
+								"thumbnail": "pkg:/images/setattribute.png",
+								"shortDescription": "Set email to empty string",
+								"longDescription": "Set your Braze user's email to empty string",
+								"braze": {
+									"action": "attribute",
+									"attribute": {
+										"item": "email",
+										"value": ""
+									}
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	},
+	"Behind the Brandz": {
+		"mediaType": "show",
+		"order": 3,
+		"data": [
+			{
+				"longDescription": "When you need your calories and you need 'em fast, this global on-demand brand delivers food from a wide range of restaurants, food trucks, and the occasional high school cafeteria.",
+				"thumbnail": "pkg:/images/ep1.png",
+				"id": "brandz_ep_1",
+				"shortDescription": "A Behind the Brandz look at Calorie Rocket",
+				"title": "Calorie Rocket"
+			},
+			{
+				"longDescription": "This retail brand is disrupting the kitchenware space, bringing direct-to-consumer strategies—and a new unlimited item monthly subscription plan—to a space dominated by entrenched incumbents.",
+				"thumbnail": "pkg:/images/ep2.png",
+				"id": "brandz_ep_2",
+				"shortDescription": "A Behind the Brandz look at Kitchenerie",
+				"title": "Kitchenerie"
+			},
+			{
+				"longDescription": "This up-and-coming streaming service has the exclusive content you never knew you needed—from the latest season of \"Siberia\" to all eight movies in the beloved McGregor & Sons franchise.",
+				"thumbnail": "pkg:/images/ep3.png",
+				"id": "brandz_ep_",
+				"shortDescription": "A Behind the Brandz look at MovieCanon",
+				"title": "MovieCanon"
+			},
+			{
+				"longDescription": "This financial services brand has a long and storied history of keeping your money safe, with an expanding portfolio of mobile banking options supported by in-the-moment transaction alerts.",
+				"thumbnail": "pkg:/images/ep4.png",
+				"id": "brandz_ep_",
+				"shortDescription": "A Behind the Brandz look at Pyrite Financial",
+				"title": "Pyrite Financial"
+			},
+			{
+				"longDescription": "Sometimes you just need a yacht—and whether it’s for a weeklong cruise or a simple ride from Mykonos to Santorini, Yachtr has you covered. This yacht-sharing and yacht-rental startup straddles the on demand and travel sectors, allowing well-heeled travelers to book yacht rides on the fly or easily extend their bookings for up to two months.",
+				"thumbnail": "pkg:/images/ep5.png",
+				"id": "brandz_ep_",
+				"shortDescription": "A Behind the Brandz look at Yachtr",
+				"title": "Yachtr"
+			},
+			{
+				"longDescription": "This fitness brand started as a step-counter app, but over the past decade it's become a leader in calorie tracking, digital exercise classes, athleisure, and even flash-mob impromptu marathons.",
+				"thumbnail": "pkg:/images/ep6.png",
+				"id": "brandz_ep_",
+				"shortDescription": "A Behind the Brandz look at Steppington",
+				"title": "Steppington"
+			}
+		]
+	}
+}
