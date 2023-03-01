@@ -116,10 +116,10 @@ m.BrazeTask.BrazeInAppMessage = invalid
 
 ## Basic SDK Integration Complete
 
-Braze should now be collecting data from your application. Please see our public documentation on how to log attributes, events, and purchases to our SDK. Our sample app's scene `samplescene.brs` also contains examples of using the API.
+Braze should now be collecting data from your application. Please see our public documentation on how to log attributes, events, and purchases to our SDK. Our sample app's scene `MainScene.brs` also contains examples of using the API.
 
-`BrazeInAppMessage.brs` shows an example of handling In-App Messages.
+`BrazeInAppMessage.brs` and `CustomSideBySideInAppMessage.brs` show examples of handling In-App Messages. `onInAppMessageTriggered()` in `MainScene.brs` shows how to support multiple layouts.
 
 ## Additional Reference
 
-The directory `SceneGraphTutorial` contains the sample app (SceneGraphTutorial.zip) from [Roku](https://sdkdocs.roku.com/display/sdkdoc/SceneGraph+Samples "Roku Tutorial App"), with the Braze SDK integrated.
+The directory `torchietv` contains a sample app with the Braze SDK integrated.
