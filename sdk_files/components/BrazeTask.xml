@@ -3,6 +3,7 @@
   <interface>
     <field id="BrazeApiInvocation" type="assocarray"/>
     <field id="BrazeInAppMessage" type="assocarray"/>
+    <field id="BrazeFeatureFlags" type="array"/>
   </interface>
   <script type="text/brightscript" uri="pkg:/components/BrazeTask.brs"/>
   <script type="text/brightscript" uri="pkg:/source/BrazeSDK.brs"/>

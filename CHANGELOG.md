@@ -1,3 +1,31 @@
+## 1.0.0
+
+##### Added
+
+- Support for Feature Flags.
+   - Get a single feature flag
+     ff = m.braze.getFeatureFlag("theme")
+     if ff.enabled 
+       bgcolor = ff.getStringProperty("bgcolor")
+       ...
+     end if
+
+   - Get all feature flags.
+     allFeatureFlags = m.braze.getAllFeatureFlags()
+
+   - Be notified when Feature Flags are updated. Data values may not always be different.
+     m.BrazeTask.ObserveField("BrazeFeatureFlags", "onFeatureFlagChanges")
+
+   - Refresh feature flags.
+     m.braze.refreshFeatureFlags()
+
+   - If you want to not cache feature flags, you can put the following in your main.brs
+   config[config_fields.FF_CACHE_DISABLED] = true
+
+##### Fixed
+
+- Fixed a circular reference between Braze and BrazeTask.
+
 ## 0.1.3
 
 ##### Fixed

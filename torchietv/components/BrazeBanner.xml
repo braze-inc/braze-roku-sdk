@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<component name="BrazeBanner" extends="Group">
+   <interface>
+      <field id="data" type="assocarray" alwaysNotify="true" />
+  </interface>
+   <children>
+      <Rectangle
+         id="infoRectangle"
+         height="50"
+         width="1020">
+         <Poster
+            id="bannerimage"
+            width="1020"
+            height="50"
+            uri="pkg:/images/newseason.png"
+            translation="[0,0]" />
+         <LayoutGroup
+            layoutDirection="horiz"
+            horizAlignment="right"
+            translation="[1020,5]"
+         >
+            <Button
+               id="brazeActionButton"
+               text=""
+               height="40"
+               focusable="true"
+               iconUri=""
+               maxWidth="1020"
+               minWidth="30"
+               focusedIconUri=""
+               focusBitmapUri="pkg:/images/focus2.9.png"
+               focusFootprintBitmapUri="pkg:/images/unfocus.9.png"
+               showFocusFootprint="true"
+               textColor="0x333333"
+               focusedTextColor="0x333333"
+            />
+         </LayoutGroup>
+      </Rectangle>
+   </children>
+   <script type="text/brightscript" uri="pkg:/components/BrazeBanner.brs"/>
+</component>

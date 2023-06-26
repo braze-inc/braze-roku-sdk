@@ -355,6 +355,42 @@
 			}
 		]
 	},
+	"Feature Flags": {
+		"mediaType": "show",
+		"order": 3,
+		"data": [
+			{
+				"longDescription": "Feature flag data will be refreshed from the server if you're not within the rate limit.",
+				"thumbnail": "pkg:/images/refresh-ff.png",
+				"id": "brazerefreshff",
+				"shortDescription": "Refresh Feature Flags",
+				"title": "Refresh Feature Flags",
+				"braze": {
+					"action": "refreshff"
+				}
+			},
+			{
+				"longDescription": "The data of feature flag \"brazetest\" will be shown in the console",
+				"thumbnail": "pkg:/images/get-ff.png",
+				"id": "brazegetff",
+				"shortDescription": "Get Feature Flag",
+				"title": "Get Feature Flag",
+				"braze": {
+					"action": "getff"
+				}
+			},
+			{
+				"longDescription": "The data of all feature flags will be shown in the console",
+				"thumbnail": "pkg:/images/get-all-ff.png",
+				"id": "brazegetallff",
+				"shortDescription": "Get All Feature Flags",
+				"title": "Get All Feature Flags",
+				"braze": {
+					"action": "getallff"
+				}
+			}
+		]
+	},
 	"Behind the Brandz": {
 		"mediaType": "show",
 		"order": 3,

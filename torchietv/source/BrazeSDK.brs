@@ -10,7 +10,8 @@ function BrazeConstants() as object
   BRAZE_CONFIG_FIELDS = {
     API_KEY: "api-key",
     ENDPOINT: "endpoint",
-    HEARTBEAT_FREQ_IN_SECONDS: "hbfreq"
+    HEARTBEAT_FREQ_IN_SECONDS: "hbfreq",
+    FF_CACHE_DISABLED: "ff_cache_disable"
   }
 
   BRAZE_STORAGE = {
@@ -20,6 +21,9 @@ function BrazeConstants() as object
     CONFIG_EVENTS_BLOCKLIST_KEY: "events_blacklist",
     CONFIG_PURCHASES_BLOCKLIST_KEY: "purchases_blacklist",
     CONFIG_MESSAGING_SESSION_TIMEOUT_KEY: "messaging_session_timeout",
+    CONFIG_FEATURE_FLAG_ENABLE_KEY: "ff_enabled",
+    CONFIG_FEATURE_FLAG_REFRESH_RATE_KEY: "ff_rrl",
+    FEATURE_FLAG_DATA_KEY: "ff_data",
     DEVICE_ID_SECTION: "braze.section.device_id",
     DEVICE_ID_KEY: "device_id"
     USER_ID_SECTION: "braze.section.user_id",
@@ -59,7 +63,8 @@ function BrazeConstants() as object
     IAM_IMPRESSION: "si",
     IAM_CONTROL_IMPRESSION: "iec",
     IAM_CLICK: "sc",
-    IAM_BUTTON_CLICK: "sbc"
+    IAM_BUTTON_CLICK: "sbc",
+    FF_IMPRESSION: "ffi"
   }
 
   TRIGGER_FIELDS = {
@@ -183,6 +188,11 @@ function BrazeConstants() as object
     BUTTON_ID: "bid"
   }
 
+  FF_IMPRESSION_EVENT_FIELDS = {
+    FID: "fid",
+    FTS: "fts"
+  }
+
   return {
     SCENE_GRAPH_EVENTS: SCENE_GRAPH_EVENTS
     SDK_DATA: SDK_DATA
@@ -205,6 +215,7 @@ function BrazeConstants() as object
     IAM_CONTROL_IMPRESSION_EVENT_FIELDS: IAM_CONTROL_IMPRESSION_EVENT_FIELDS
     IAM_CLICK_EVENT_FIELDS: IAM_CLICK_EVENT_FIELDS
     IAM_BUTTON_CLICK_EVENT_FIELDS: IAM_BUTTON_CLICK_EVENT_FIELDS
+    FF_IMPRESSION_EVENT_FIELDS: FF_IMPRESSION_EVENT_FIELDS
   }
 end function
 
@@ -243,7 +254,15 @@ function BrazeInit(config as object, messagePort as object)
     end function,
 
     brazeReadDataBoolean: function(key as string, section as string, default = false as boolean) as boolean
-      return m.brazeReadData(key, section, default) = true.ToStr()
+      result = m.brazeReadData(key, section, default)
+      if Type(result) <> "Boolean"
+        if result = true.ToStr()
+          result = true
+        else
+          result = false
+        end if
+      end if
+      return result
     end function
   }
 
@@ -291,11 +310,11 @@ function BrazeInit(config as object, messagePort as object)
           di = CreateObject("roDeviceInfo")
           stored_device_id = di.GetRandomUUID()
           storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.DEVICE_ID_KEY, BrazeConstants().BRAZE_STORAGE.DEVICE_ID_SECTION, stored_device_id)
-          logger = Braze()._privateApi.brazeLogger
-          logger.debug("Generated Device ID", stored_device_id)
+          brazelogger = Braze()._privateApi.brazeLogger
+          brazelogger.debug("Generated Device ID", stored_device_id)
         else
-          logger = Braze()._privateApi.brazeLogger
-          logger.debug("Saved Device ID", stored_device_id)
+          brazelogger = Braze()._privateApi.brazeLogger
+          brazelogger.debug("Saved Device ID", stored_device_id)
         end if
         m.cachedDeviceId = stored_device_id
       end if
@@ -336,6 +355,8 @@ function BrazeInit(config as object, messagePort as object)
         if raw_response <> invalid
           config_response = ParseJson(raw_response)
         end if
+        m.cachedconfig.feature_flags_last_update = 0
+        m.cachedconfig.feature_flags_sent_ffi = {}
         if config_response = invalid or config_response.config = invalid or config_response.config.time = invalid
           m.cachedConfig.config_time = stored_config_time
           stored_attributes_blocklist = storage.brazeReadData(BrazeConstants().BRAZE_STORAGE.CONFIG_ATTRIBUTES_BLOCKLIST_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
@@ -348,6 +369,22 @@ function BrazeInit(config as object, messagePort as object)
           m.cachedConfig.events_blocklist = ParseJson(stored_events_blocklist)
           m.cachedConfig.purchases_blocklist = ParseJson(stored_purchases_blocklist)
           m.cachedConfig.messaging_session_timeout = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_MESSAGING_SESSION_TIMEOUT_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+          m.cachedconfig.feature_flags_enabled = storage.brazeReadDataBoolean(BrazeConstants().BRAZE_STORAGE.CONFIG_FEATURE_FLAG_ENABLE_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+          m.cachedconfig.feature_flags_rate_limit = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_FEATURE_FLAG_REFRESH_RATE_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+          if m.cachedconfig.feature_flags_enabled = true
+            ff_json = storage.brazeReadData(BrazeConstants().BRAZE_STORAGE.FEATURE_FLAG_DATA_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+            if ff_json <> invalid
+              ff_data = ParseJson(ff_json)
+              if ff_data <> invalid
+                brazetask = getBrazeTask()
+                if brazetask <> invalid
+                  getBrazeTask().BrazeFeatureFlags = ff_data.feature_flags
+                end if
+              else 
+                brazelogger.debug("stored feature flag data was invalid", ff_json)
+              end if
+            end if
+          end if
         else
           config_time = config_response.config.time
           storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, config_time)
@@ -359,15 +396,31 @@ function BrazeInit(config as object, messagePort as object)
           else
             config_messaging_session_timeout = 0
           end if
+          if config_response.config.feature_flags <> invalid
+            feature_flags_enabled = config_response.config.feature_flags.enabled
+            feature_flags_rate_limit = config_response.config.feature_flags.refresh_rate_limit
+          else
+            feature_flags_enabled = false
+            feature_flags_rate_limit = 0
+          end if
           storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_ATTRIBUTES_BLOCKLIST_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, FormatJson(config_attributes_blocklist))
           storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_EVENTS_BLOCKLIST_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, FormatJson(config_events_blocklist))
           storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_PURCHASES_BLOCKLIST_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, FormatJson(config_purchases_blocklist))
           storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_MESSAGING_SESSION_TIMEOUT_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, FormatJson(config_messaging_session_timeout))
+          storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_FEATURE_FLAG_ENABLE_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, feature_flags_enabled)
+          storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.CONFIG_FEATURE_FLAG_REFRESH_RATE_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, feature_flags_rate_limit)
           m.cachedConfig.config_time = config_time
           m.cachedConfig.attributes_blocklist = config_attributes_blocklist
           m.cachedConfig.events_blocklist = config_events_blocklist
           m.cachedConfig.purchases_blocklist = config_purchases_blocklist
           m.cachedConfig.messaging_session_timeout = config_messaging_session_timeout
+          m.cachedconfig.feature_flags_enabled = feature_flags_enabled
+          m.cachedconfig.feature_flags_rate_limit = feature_flags_rate_limit
+
+          if m.cachedconfig.feature_flags_enabled = false
+            storage.brazeDeleteData(BrazeConstants().BRAZE_STORAGE.FEATURE_FLAG_DATA_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+            getBrazeTask().BrazeFeatureFlags = {}
+          end if   
         end if
         if config_response <> invalid and config_response.triggers <> invalid
           m.cachedConfig.triggers = config_response.triggers
@@ -410,6 +463,13 @@ function BrazeInit(config as object, messagePort as object)
           m.cachedConfig.events_blocklist = config_events_blocklist
           m.cachedConfig.purchases_blocklist = config_purchases_blocklist
           m.cachedConfig.messaging_session_timeout = config_messaging_session_timeout
+          if config_response.config.feature_flags <> invalid
+            feature_flags_enabled = config_response.config.feature_flags.enabled
+            feature_flags_rate_limit = config_response.config.feature_flags.refresh_rate_limit
+          else
+            feature_flags_enabled = false
+            feature_flags_rate_limit = 0
+          end if
         end if
         if config_response <> invalid and config_response.triggers <> invalid
           m.cachedConfig.triggers = config_response.triggers
@@ -732,6 +792,45 @@ function BrazeInit(config as object, messagePort as object)
       return trigger
     end function,
 
+    refreshFeatureFlags: function() as void
+      cached_config = Braze()._privateapi.dataprovider.cachedconfig
+      ff_enabled = cached_config.feature_flags_enabled
+      brazelogger = Braze()._privateApi.brazeLogger
+
+      if ff_enabled = false
+        brazelogger.debug("feature flags are not enabled, not refreshing", "")
+        return
+      end if
+
+      last_update = cached_config.feature_flags_last_update 
+      rate_limit = cached_config.feature_flags_rate_limit
+      now = Braze()._privateApi.timeUtils.getCurrentTimeSeconds()
+
+      if last_update + rate_limit < now
+        raw_response = Braze()._privateapi.eventhandler.requestFeatureFlags()
+        if raw_response <> invalid
+          ff_response = ParseJson(raw_response)
+          if ff_response <> invalid
+            storage = Braze()._privateApi.storage
+            if Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.FF_CACHE_DISABLED] <> true
+              storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.FEATURE_FLAG_DATA_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION, raw_response)
+            else
+              ' If the config was modified during an upgrade, clear out the storage. If feature flags got disabled, it'll be cleared above
+              storage.brazeDeleteData(BrazeConstants().BRAZE_STORAGE.FEATURE_FLAG_DATA_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
+            end if
+            Braze()._privateapi.dataprovider.cachedconfig.feature_flags_last_update = now
+            getBrazeTask().BrazeFeatureFlags = ff_response.feature_flags
+          else
+            brazelogger.debug("feature flag response could not be parsed", raw_response)
+          end if
+        else 
+          brazelogger.debug("feature flag response was invalid", "")
+        end if
+      else
+        brazelogger.debug("refreshFeatureFlag called too soon. Seconds to wait", last_update + rate_limit - now)
+      end if
+    end function,
+
     compareNumbers: function(value, comparator, comparison_value) as boolean
       if comparator = BrazeConstants().TRIGGER_COMPARATORS.EQUALS
         return m.isnumeric(value) and value = comparison_value
@@ -803,7 +902,7 @@ function BrazeInit(config as object, messagePort as object)
     end function,
   }
 
-  Logger = {
+  BrazeLogger = {
     debug: function(tag as string, message as dynamic) as void
       m.logMessage(tag, message.ToStr())
     end function,
@@ -877,6 +976,14 @@ function BrazeInit(config as object, messagePort as object)
       event_data[BrazeConstants().IAM_BUTTON_CLICK_EVENT_FIELDS.TRIGGER_IDS] = [trigger_id]
       event_data[BrazeConstants().IAM_BUTTON_CLICK_EVENT_FIELDS.BUTTON_ID] = button_id
       event_object = m.createEventObject(BrazeConstants().EVENT_TYPES.IAM_BUTTON_CLICK, event_data)
+      return event_object
+    end function,
+
+    createFeatureFlagImpressionEvent: function(ffId as string, fts as string) as object
+      event_data = {}
+      event_data[BrazeConstants().FF_IMPRESSION_EVENT_FIELDS.FID] = ffId
+      event_data[BrazeConstants().FF_IMPRESSION_EVENT_FIELDS.FTS] = fts
+      event_object = m.createEventObject(BrazeConstants().EVENT_TYPES.FF_IMPRESSION, event_data)
       return event_object
     end function,
 
@@ -986,7 +1093,18 @@ function BrazeInit(config as object, messagePort as object)
       headers = []
       server_response = Braze()._privateApi.networkUtil.postToUrl(endpoint, json, headers)
       return server_response
-    end function
+    end function,
+
+    requestFeatureFlags: function()
+      required_fields = Braze()._privateApi.networkUtil.generateRequiredRequestFields()
+      endpoint = Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.ENDPOINT] + "api/v3/feature_flags/sync"
+      headers = [
+        { key: "X-Braze-FeatureFlagsRequest", value: "true" },
+        { key: "X-Braze-DataRequest", value: "true" }
+      ]
+      server_response = Braze()._privateApi.networkUtil.postToUrl(endpoint, required_fields, headers)
+      return server_response
+    end function,
   }
 
   NetworkUtil = {
@@ -1032,6 +1150,13 @@ function BrazeInit(config as object, messagePort as object)
         "device_id": device_id
       })
 
+      user_id = Braze()._privateApi.dataProvider.UserIdProvider()
+      if user_id <> "" then
+        request_fields.Append({
+          "user_id": user_id
+        })
+      end if
+
       if (include_device)
         device_object = Braze()._privateApi.dataProvider.DeviceDataProvider()
         request_fields.Append({
@@ -1054,7 +1179,7 @@ function BrazeInit(config as object, messagePort as object)
       end if
       event_properties = args[BrazeConstants().BRAZE_EVENT_API_FIELDS.CUSTOM_EVENT_PROPERTIES]
       event_object = m._privateApi.eventHandler.createCustomEventEvent(event_name, event_properties)
-      m._privateApi.brazeUtils.processTriggers(BrazeConstants().TRIGGER_TYPES.CUSTOM_EVENT, m._privateapi.dataprovider.ConfigProvider().triggers, m.task, { event_name: event_name, event_properties: event_properties, event_object: event_object })
+      m._privateApi.brazeUtils.processTriggers(BrazeConstants().TRIGGER_TYPES.CUSTOM_EVENT, m._privateapi.dataprovider.ConfigProvider().triggers, getBrazeTask(), { event_name: event_name, event_properties: event_properties, event_object: event_object })
       m._privateApi.eventHandler.logEvent(event_object)
     end function,
 
@@ -1071,7 +1196,7 @@ function BrazeInit(config as object, messagePort as object)
       quantity = args[BrazeConstants().BRAZE_EVENT_API_FIELDS.QUANTITY]
       event_properties = args[BrazeConstants().BRAZE_EVENT_API_FIELDS.PURCHASE_EVENT_PROPERTIES]
       event_object = m._privateApi.eventHandler.createPurchaseEvent(product_id, currency_code, price, quantity, event_properties)
-      m._privateApi.brazeUtils.processTriggers(BrazeConstants().TRIGGER_TYPES.PURCHASE, m._privateapi.dataprovider.ConfigProvider().triggers, m.task, { product_id: product_id, event_properties: event_properties, event_object: event_object })
+      m._privateApi.brazeUtils.processTriggers(BrazeConstants().TRIGGER_TYPES.PURCHASE, m._privateapi.dataprovider.ConfigProvider().triggers, getBrazeTask(), { product_id: product_id, event_properties: event_properties, event_object: event_object })
       m._privateApi.eventHandler.logEvent(event_object)
     end function,
 
@@ -1225,6 +1350,36 @@ function BrazeInit(config as object, messagePort as object)
       end if
     end function,
 
+    refreshFeatureFlags: function(args as object) ' public API
+      m._privateapi.brazeutils.refreshFeatureFlags()
+    end function,
+
+    logFeatureFlagImpression: function(args as object) as void
+      brazelogger = m._privateApi.brazeLogger
+      feature_flags_raw = getBrazeTask().BrazeFeatureFlags
+      ffId = args.ffId
+
+      for each ff in feature_flags_raw
+        if ff.id = ffId
+          fts = ff.fts
+          exit for
+        end if
+      end for
+
+      if fts <> invalid
+        if m._privateapi.dataprovider.cachedconfig.feature_flags_sent_ffi[fts] <> invalid
+          brazeLogger.debug("Not logging a feature flag impression. Was already logged once this session.", FormatJson(args))
+        else
+          m._privateapi.dataprovider.cachedconfig.feature_flags_sent_ffi[fts] = 1
+          event_object = m._privateApi.eventHandler.createFeatureFlagImpressionEvent(ffId, fts)
+          brazeLogger.debug("Logging a feature flag impression. ", FormatJson(args))
+          m._privateApi.eventHandler.logEvent(event_object)  
+        end if
+      else 
+        brazeLogger.debug("Not logging a feature flag impression. The feature flag was not part of any matching campaign", FormatJson(args))
+      end if
+    end function,
+
     sessionStart: function(args as object) as void
       session_uuid = m._privateapi.dataprovider.SessionIdProvider()
       m._privateApi.brazeLogger.debug("session starting", session_uuid)
@@ -1248,8 +1403,9 @@ function BrazeInit(config as object, messagePort as object)
         active_trigger.delete("template_only")
         active_trigger.id = active_trigger.trigger_id
         active_trigger.delete("trigger_id")
-        m.task.BrazeInAppMessage = active_trigger
+        getBrazeTask().BrazeInAppMessage = active_trigger
       end if
+      m._privateapi.brazeutils.refreshFeatureFlags()
     end function,
 
     sessionHeartBeat: function(args as object) as void
@@ -1293,6 +1449,8 @@ function BrazeInit(config as object, messagePort as object)
         storage.brazeSaveData(BrazeConstants().BRAZE_STORAGE.USER_ID_KEY, BrazeConstants().BRAZE_STORAGE.USER_ID_SECTION, user_id)
         m._privateapi.dataprovider.cachedUserId = user_id
         m._privateapi.dataprovider.cachedconfig.triggers = invalid
+        m._privateapi.dataprovider.cachedconfig.feature_flags_last_update = 0
+        m._privateapi.dataprovider.cachedconfig.feature_flags_sent_ffi = {}
         m._privateApi.dataProvider.syncForNewUser()
         m.sessionStart({})
       else
@@ -1307,7 +1465,7 @@ function BrazeInit(config as object, messagePort as object)
     dataProvider: DataProvider
     timeUtils: TimeUtils
     networkUtil: NetworkUtil
-    brazeLogger: Logger
+    brazeLogger: BrazeLogger
     eventHandler: eventHandler
     brazeUtils: BrazeUtils
   }
@@ -1322,6 +1480,55 @@ function Braze() as object
     print "BrazeInit not called beforehand"
   end if
   return GetGlobalAA().brazeInstance
+end function
+
+function getBrazeTask() as object
+  return GetGlobalAA().brazeTask
+end function
+
+' An internal method to allow us to return Feature Flags with the convenience methods
+function _createFeatureFlag(ff as object) as object
+  return {
+    id: ff.id,
+    enabled: ff.enabled,
+    properties: ff.properties,
+    getStringProperty: function(key as string) as object
+      for each prop in m.properties
+        if prop = key
+          if m.properties[prop].type = "string"
+            return m.properties[prop].value
+          else
+            return invalid
+          end if
+        end if
+      end for
+      return invalid
+    end function,
+    getBooleanProperty: function(key as string) as object
+      for each prop in m.properties
+        if prop = key
+          if m.properties[prop].type = "boolean"
+            return m.properties[prop].value
+          else
+            return invalid
+          end if
+        end if
+      end for
+      return invalid
+    end function,
+    getNumberProperty: function(key as string) as object
+      for each prop in m.properties
+        if prop = key
+          if m.properties[prop].type = "number"
+            return m.properties[prop].value
+          else
+            return invalid
+          end if
+        end if
+      end for
+      return invalid
+    end function,
+  }
 end function
 
 function getBrazeInstance(task as object) as object
@@ -1437,6 +1644,34 @@ function getBrazeInstance(task as object) as object
 
     logIAMButtonClick: function(trigger_id as string, button_id as integer) as void
       m.callInstanceMethod("logIAMButtonClick", { key: "trigger_id", value: trigger_id, value2: button_id })
+    end function,
+
+    refreshFeatureFlags: function() as void
+      m.callInstanceMethod("refreshFeatureFlags", { })
+    end function,
+
+    getAllFeatureFlags: function() as object
+      feature_flags = []
+      feature_flags_raw = getBrazeTask().BrazeFeatureFlags
+      for each ff in feature_flags_raw
+        feature_flags.push(_createFeatureFlag(ff))
+      end for
+      return feature_flags
+    end function,
+
+    getFeatureFlag: function(id as string) as object
+      feature_flags = getBrazeTask().BrazeFeatureFlags
+      for each ff in feature_flags 
+        if ff.id = id
+          return _createFeatureFlag(ff)
+        end if
+      end for
+      emptyFF = { "id": id, "enabled": false, properties: {} }
+      return _createFeatureFlag(emptyFF)
+    end function,
+    
+    logFeatureFlagImpression: function(featureFlagId as string) as void
+      m.callInstanceMethod("logFeatureFlagImpression", { ffId: featureFlagId })
     end function,
 
     callInstanceMethod: function(methodName as string, args as object) as void

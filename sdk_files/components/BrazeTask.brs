@@ -9,7 +9,7 @@ sub setupBrazeSdk()
   config = m.global.brazeConfig
   BrazeInit(config, m.port)
   m.braze = Braze()
-  m.braze.task = m.top
+  GetGlobalAA().brazetask = m.top
   heartbeat_timer = CreateObject("roDateTime")
   heartbeat_start = heartbeat_timer.asseconds()
   heartbeat_timeout = m.global.brazeconfig[BrazeConstants().braze_config_fields.heartbeat_freq_in_seconds]

@@ -19,6 +19,7 @@
             title = "TorchieTV" 
             showOptions="true"
             showClock="true"
+            optionsAvailable="true"
             optionsText=""
             logoUri="pkg:/images/hd_overhang_logo.png"
             translation="[0,30]"

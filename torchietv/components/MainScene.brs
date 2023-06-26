@@ -6,9 +6,11 @@ sub Init()
     m.BrazeTask = CreateObject("roSGNode", "BrazeTask")
     m.Braze = getBrazeInstance(m.BrazeTask)
     m.BrazeTask.ObserveField("BrazeInAppMessage", "onInAppMessageTriggered")
+    m.BrazeTask.ObserveField("BrazeFeatureFlags", "onFeatureFlagChanges")
 
     ' set background color for scene. Applied only if backgroundUri has empty value
-    m.top.backgroundColor = "0x662D91"
+    m.top.backgroundColor = "0x363648"
+    m.top.backgroundURI = ""
     m.loadingIndicator = m.top.FindNode("loadingIndicator") ' store loadingIndicator node to m
     InitScreenStack()
     ShowGridScreen()
@@ -80,4 +82,33 @@ sub onInAppMessageTriggered()
       m.BrazeTask.BrazeInAppMessage = invalid
     end if
   end sub
+  
+sub onFeatureFlagChanges()
+  print "On FeatureFlag Changes()"
+  ff = m.braze.getFeatureFlag("theme")
+  if ff.enabled 
+    bgcolor = ff.getStringProperty("bgcolor")
+    if bgcolor <> invalid
+      m.top.backgroundColor = bgcolor
+      m.braze.logFeatureFlagImpression(ff.id)
+    end if
+  end if
+  ff = m.braze.getFeatureFlag("banner")
+  if ff.enabled
+    ' If it's already set, don't set it again
+    if m.GridScreen.bannerData = invalid
+      m.GridScreen.bannerData = { 
+        "cta": ff.getStringProperty("cta"),
+        "longDescription": ff.getStringProperty("longDescription"),
+        "thumbnail": ff.getStringProperty("thumbnail"),
+        "shortDescription": ff.getStringProperty("shortDescription"),
+        "title": ff.getStringProperty("title"),
+        "bannerImg": ff.getStringProperty("bannerImg"),
+        "episodeId": ff.getStringProperty("episodeId"),
+    }
+    end if
+  else 
+    m.GridScreen.bannerData = invalid
+  end if
+end sub
   

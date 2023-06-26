@@ -33,6 +33,8 @@ sub ConfigureBrazeSdk(globalNode as object)
     config[config_fields.API_KEY] = "5c636baa-dfa4-453a-9484-cb6dc7727988"
     config[config_fields.ENDPOINT] = "https://sondheim.appboy.com/"
     config[config_fields.HEARTBEAT_FREQ_IN_SECONDS] = 30
+    ' Uncomment the line below to NOT cache feature flags and save registry space
+    'config[config_fields.FF_CACHE_DISABLED] = true
 
     sec = CreateObject("roRegistrySection", "user")
     if sec.Exists("apikey")

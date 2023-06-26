@@ -12,7 +12,42 @@ sub Init()
     m.titleLabel = m.top.FindNode("titleLabel")
     ' observe rowItemFocused so we can know when another item of rowList will be focused
     m.rowList.ObserveField("rowItemFocused", "OnItemFocused")
+
+    m.button = m.top.FindNode("brazeActionButton")
+    m.top.ObserveField("bannerData", "OnShowBannerChanged")
+    m.bannerShown = false
 end sub
+
+sub OnShowBannerChanged(event)
+    banner = m.top.FindNode("brazeBanner")
+
+    if m.top.bannerData <> invalid
+        banner.data = m.top.bannerData
+        animateBannerIn = m.top.findNode("animateBannerIn")
+        animateBannerIn.repeat = false
+        animateBannerIn.control = "start"
+        m.bannerShown = true
+    else if m.bannerShown = true
+        animateBannerOut = m.top.findNode("animateBannerOut")
+        animateBannerOut.repeat = false
+        animateBannerOut.control = "start"
+        m.bannerShown = false
+    end if
+end sub
+
+function OnKeyEvent(key, press) as boolean
+    result = false
+    if press then
+        if key = "up" and m.button.hasFocus() = false and m.bannerShown
+            m.button.setfocus(true)
+            result = true
+        else if key = "down" and m.button.hasFocus() = true
+            m.rowlist.setfocus(true)
+            result = true
+        end if
+    end if
+    return result
+end function
 
 sub OnVisibleChange() ' invoked when GridScreen change visibility
     if m.top.visible = true

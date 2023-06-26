@@ -17,6 +17,12 @@ sub HandleBrazeItem(item as Object)
         logPurchase(item.purchase)
     else if item.action = "attribute"
         setAttribute(item.attribute)
+    else if item.action = "getff"
+        promptForFeatureFlag()
+    else if item.action = "getallff"
+        getAllFeatureFlags()
+    else if item.action = "refreshff"
+        m.Braze.refreshFeatureFlags()
     end if
 end sub
 
@@ -115,6 +121,11 @@ sub promptForUserId()
     promptForValue()
 end sub
 
+sub promptForFeatureFlag()
+    m.promptType = "featureflag"
+    promptForValue()
+end sub
+
 sub promptForValue()
     m.promptdialog = createObject("roSGNode", "StandardKeyboardDialog")
     currentVal = ""
@@ -133,6 +144,9 @@ sub promptForValue()
         if currentVal = ""
             currentVal = m.global.brazeconfig["endpoint"]
         end if
+    else if m.promptType = "featureflag"
+        m.promptdialog.title = "Feature Flag Key"
+        currentVal = getStoredValue("ffkey")
     end if
 
     m.promptdialog.buttons = ["OK"]
@@ -152,8 +166,23 @@ sub promptForValueDismissed()
         setStoredValue("apikey", newvalue)
     else if m.promptType = "endpoint"
         setStoredValue("endpoint", newvalue)
+    else if m.promptType = "featureflag"
+        setStoredValue("ffkey", newvalue)
+        getSingleFeatureFlag(newvalue)
     end if
     m.promptdialog.close = true
+end sub
+
+sub getAllFeatureFlags()
+    feature_flags = m.braze.getAllFeatureFlags()
+    for each ff in feature_flags
+        print "Feature Flag id: " ff.id + " enabled: " + ff.enabled.toStr()
+    end for
+end sub
+
+sub getSingleFeatureFlag(flagKey as String) 
+    ff = m.braze.getFeatureFlag(flagKey)
+    print "Feature Flag id: " ff.id + " enabled: " + ff.enabled.toStr()
 end sub
 
 sub updateOverhangUser(userid as String) 

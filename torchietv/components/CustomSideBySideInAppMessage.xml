@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
 
-<component name="CustomSideBySideInAppMessage">
+<component name="CustomSideBySideInAppMessage" extends="Group">
 <interface>
    <field id="inappmessage" type="assocarray" alwaysNotify="true" />
    <field id="BrazeTask" type="node"/>
