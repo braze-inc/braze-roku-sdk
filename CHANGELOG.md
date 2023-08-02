@@ -1,3 +1,9 @@
+## 1.0.1
+
+##### Fixed
+
+- Fixed warning that occurs when Feature Flags are not enabled.
+
 ## 1.0.0
 
 ##### Added

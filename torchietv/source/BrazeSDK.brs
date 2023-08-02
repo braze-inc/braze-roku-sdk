@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "0.1.3"
+    SDK_VERSION: "1.0.1"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -419,7 +419,7 @@ function BrazeInit(config as object, messagePort as object)
 
           if m.cachedconfig.feature_flags_enabled = false
             storage.brazeDeleteData(BrazeConstants().BRAZE_STORAGE.FEATURE_FLAG_DATA_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
-            getBrazeTask().BrazeFeatureFlags = {}
+            getBrazeTask().BrazeFeatureFlags = []
           end if   
         end if
         if config_response <> invalid and config_response.triggers <> invalid
