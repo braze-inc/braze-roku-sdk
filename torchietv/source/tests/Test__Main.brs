@@ -40,6 +40,8 @@ function TestSuite__Main() as object
   this.addTest("InstanceMethodSetsUserId", TestCase__Instance_Method_Sets_User_ID)
   this.addTest("RefreshFeatureFlagsCallsNetwork", TestCase__RefreshFeatureFlags_calls_network)
   this.addTest("RefreshFeatureFlagsTooSoonDoesNotCallNetwork", TestCase__RefreshFeatureFlags_tooSoon_does_not_call_network)
+  this.addTest("RefreshFeatureFlagsTooSoonTriggersUpdate", TestCase__RefreshFeatureFlags_tooSoon_triggers_update)
+  this.addTest("RefreshFeatureFlagsWhenDisabledTriggersUpdate", TestCase__RefreshFeatureFlags_whenDisabled_triggers_update)
   this.addTest("RefreshFeatureFlagsWhenDisabledDoesNotCallNetwork", TestCase__RefreshFeatureFlags_whenDisabled_does_not_call_network)
   this.addTest("GetFeatureFlag", TestCase__GetFeatureFlag)
   this.addTest("GetFeatureFlagDoesntExist", TestCase__GetFeatureFlag_flagDoesntExist)
@@ -961,6 +963,29 @@ function TestCase__RefreshFeatureFlags_whenDisabled_does_not_call_network() as s
 end function
 
 ' @Test
+function TestCase__RefreshFeatureFlags_tooSoon_triggers_update() as string
+  m.braze._privateapi.dataprovider.cachedconfig.feature_flags_last_update = Braze()._privateApi.timeUtils.getCurrentTimeSeconds() - 1
+  m.braze._privateapi.dataprovider.cachedconfig.feature_flags_rate_limit = 300
+  GetGlobalAA().brazetask.BrazeFeatureFlagsUpdated = false
+  m.Braze.refreshFeatureFlags({})
+  if GetGlobalAA().brazetask.BrazeFeatureFlagsUpdated <> true
+    return "failure"
+  end if
+  return ""
+end function
+
+' @Test
+function TestCase__RefreshFeatureFlags_whenDisabled_triggers_update() as string
+  m.braze._privateapi.dataprovider.cachedconfig.feature_flags_enabled = false
+  GetGlobalAA().brazetask.BrazeFeatureFlagsUpdated = false
+  m.Braze.refreshFeatureFlags({})
+  if GetGlobalAA().brazetask.BrazeFeatureFlagsUpdated <> true
+    return "failure"
+  end if
+  return ""
+end function
+
+' @Test
 function TestCase__GetFeatureFlag() as string
   m.brazeTask.BrazeFeatureFlags = [
     {
@@ -1020,7 +1045,7 @@ function TestCase__GetFeatureFlag_flagDoesntExist() as string
   ]
 
   ff = m.Brazeinstance.getFeatureFlag("flagDoesntExist")
-  result = m.AssertFalse(ff.enabled)
+  result = m.assertInvalid(ff)
   return result
 end function
 

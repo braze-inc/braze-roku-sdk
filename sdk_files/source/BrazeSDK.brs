@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "1.0.1"
+    SDK_VERSION: "2.0.0"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -799,6 +799,7 @@ function BrazeInit(config as object, messagePort as object)
 
       if ff_enabled = false
         brazelogger.debug("feature flags are not enabled, not refreshing", "")
+        getBrazeTask().BrazeFeatureFlagsUpdated = true
         return
       end if
 
@@ -829,6 +830,7 @@ function BrazeInit(config as object, messagePort as object)
       else
         brazelogger.debug("refreshFeatureFlag called too soon. Seconds to wait", last_update + rate_limit - now)
       end if
+      getBrazeTask().BrazeFeatureFlagsUpdated = true
     end function,
 
     compareNumbers: function(value, comparator, comparison_value) as boolean
@@ -1666,8 +1668,7 @@ function getBrazeInstance(task as object) as object
           return _createFeatureFlag(ff)
         end if
       end for
-      emptyFF = { "id": id, "enabled": false, properties: {} }
-      return _createFeatureFlag(emptyFF)
+      return invalid
     end function,
     
     logFeatureFlagImpression: function(featureFlagId as string) as void

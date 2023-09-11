@@ -6,7 +6,7 @@ sub Init()
     m.BrazeTask = CreateObject("roSGNode", "BrazeTask")
     m.Braze = getBrazeInstance(m.BrazeTask)
     m.BrazeTask.ObserveField("BrazeInAppMessage", "onInAppMessageTriggered")
-    m.BrazeTask.ObserveField("BrazeFeatureFlags", "onFeatureFlagChanges")
+    m.BrazeTask.ObserveField("BrazeFeatureFlagsUpdated", "onFeatureFlagChanges")
 
     ' set background color for scene. Applied only if backgroundUri has empty value
     m.top.backgroundColor = "0x363648"
@@ -86,7 +86,7 @@ sub onInAppMessageTriggered()
 sub onFeatureFlagChanges()
   print "On FeatureFlag Changes()"
   ff = m.braze.getFeatureFlag("theme")
-  if ff.enabled 
+  if ff <> invalid and ff.enabled 
     bgcolor = ff.getStringProperty("bgcolor")
     if bgcolor <> invalid
       m.top.backgroundColor = bgcolor
@@ -94,7 +94,7 @@ sub onFeatureFlagChanges()
     end if
   end if
   ff = m.braze.getFeatureFlag("banner")
-  if ff.enabled
+  if ff <> invalid and ff.enabled
     ' If it's already set, don't set it again
     if m.GridScreen.bannerData = invalid
       m.GridScreen.bannerData = { 

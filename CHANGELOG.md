@@ -1,3 +1,10 @@
+## 2.0.0
+
+##### Breaking
+- `getFeatureFlag` will return `invalid` when the flag does not exist.
+- `BrazeTask` now observes `BrazeFeatureFlagsUpdated` to know when Feature Flags refreshes succeed or fail. Data values may not always be different.
+  - This will prevent you from being notified on the initial cache load. You can still observe `BrazeFeatureFlags` if you want to be notified of the cache load.
+
 ## 1.0.1
 
 ##### Fixed
@@ -11,7 +18,7 @@
 - Support for Feature Flags.
    - Get a single feature flag
      ff = m.braze.getFeatureFlag("theme")
-     if ff.enabled 
+     if ff <> invalid and ff.enabled 
        bgcolor = ff.getStringProperty("bgcolor")
        ...
      end if
@@ -20,7 +27,7 @@
      allFeatureFlags = m.braze.getAllFeatureFlags()
 
    - Be notified when Feature Flags are updated. Data values may not always be different.
-     m.BrazeTask.ObserveField("BrazeFeatureFlags", "onFeatureFlagChanges")
+     m.BrazeTask.ObserveField("BrazeFeatureFlagsUpdated", "onFeatureFlagChanges")
 
    - Refresh feature flags.
      m.braze.refreshFeatureFlags()

@@ -182,7 +182,11 @@ end sub
 
 sub getSingleFeatureFlag(flagKey as String) 
     ff = m.braze.getFeatureFlag(flagKey)
-    print "Feature Flag id: " ff.id + " enabled: " + ff.enabled.toStr()
+    if ff = invalid
+        print "Feature Flag id: " ff.id + " does not exist"
+    else
+        print "Feature Flag id: " ff.id + " enabled: " + ff.enabled.toStr()
+    end if
 end sub
 
 sub updateOverhangUser(userid as String) 
