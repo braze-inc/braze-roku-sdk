@@ -1,7 +1,7 @@
 title=TorchieTV
-major_version=1
-minor_version=0
-build_version=1
+major_version=3
+minor_version=20
+build_version=0
 mm_icon_focus_hd=pkg:/images/channel-icon_HD.png
 splash_screen_hd=pkg:/images/splash_hd.png
 ui_resolutions=hd

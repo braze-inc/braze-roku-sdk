@@ -1,3 +1,9 @@
+## 2.1.0
+
+##### Added
+
+- Added support for sending App Version information to Braze.
+
 ## 2.0.0
 
 ##### Breaking

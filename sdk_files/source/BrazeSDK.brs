@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "2.0.0"
+    SDK_VERSION: "2.1.0"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -294,9 +294,13 @@ function BrazeInit(config as object, messagePort as object)
 
     AppDataProvider: function() as object
       if m.cachedAppInfo = invalid then
+        ai = CreateObject("roAppInfo")
+        app_version = ai.GetVersion()
         m.cachedAppInfo = {
           sdk_version: BrazeConstants().SDK_DATA.SDK_VERSION
           api_key: Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.API_KEY]
+          app_version_code: app_version + ".0"
+          app_version: app_version
         }
       end if
       return m.cachedAppInfo
