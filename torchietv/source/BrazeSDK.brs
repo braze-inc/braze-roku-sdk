@@ -1117,7 +1117,7 @@ function BrazeInit(config as object, messagePort as object)
     postToUrl: function(url as string, postJson as object, headers = [] as object) as object
       request = CreateObject("roUrlTransfer")
       port = CreateObject("roMessagePort")
-      request.SetPort(port)
+      request.SetMessagePort(port)
       request.SetCertificatesFile("common:/certs/ca-bundle.crt")
       request.InitClientCertificates()
       request.SetUrl(url)
