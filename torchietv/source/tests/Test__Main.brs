@@ -50,6 +50,8 @@ function TestSuite__Main() as object
   this.addTest("LogFeatureFlagImpression", TestCase__logFeatureFlagImpression)
   this.addTest("LogFeatureFlagImpressionWhenNoFtsSendsNothing", TestCase__logFeatureFlagImpression_whenNoFts_SendsNothing)
   this.addTest("LogFeatureFlagImpressionOnlyOncePerSession", TestCase__logFeatureFlagImpression_onlyOncePerSession)
+  this.addTest("BrazeUtils.isBlankOrEmpty", TestCase__isBlankOrEmpty)
+  this.addTest("AddUserAlias", TestCase__addUserAlias)
   'TODO
   ' truncate function
   ' triggers
@@ -1071,6 +1073,25 @@ function TestCase__FeatureFlag_PropertyGetters() as string
         "floatProp": {
           type: "number",
           value: 1.29
+        },
+        "timeProp": {
+          type: "datetime",
+          value: "1716608700000"
+        },
+        "imageProp": {
+          type: "image",
+          value: "https://www.braze.com/braze.png"
+        },
+        "jsonProp": {
+          type: "jsonobject",
+          value: {
+            a: "aye",
+            b: 2,
+            c: {
+              c1: "c1",
+              c2: "c2"
+            }
+          }
         }
       }
     }
@@ -1081,10 +1102,20 @@ function TestCase__FeatureFlag_PropertyGetters() as string
   booleanVal = ff.getBooleanProperty("booleanProp")
   intVal = ff.getNumberProperty("intProp")
   floatVal = ff.getNumberProperty("floatProp")
+  imageVal = ff.getImageProperty("imageProp")
+  timeVal = ff.getTimestampProperty("timeProp")
+  jsonVal = ff.getJSONProperty("jsonProp")
+
   result = m.AssertEqual(stringVal, "imastring")
   result += m.AssertTrue(booleanVal)
   result += m.AssertEqual(intVal, 129)
   result += m.AssertEqual(floatVal, 1.29)
+  result += m.AssertEqual(imageVal, "https://www.braze.com/braze.png")
+  result += m.AssertEqual(timeVal, "1716608700000")
+  result += m.AssertEqual(jsonVal.a, "aye")
+  result += m.AssertEqual(jsonVal.b, 2)
+  result += m.AssertEqual(jsonVal.c.c1, "c1")
+  result += m.AssertEqual(jsonVal.c.c2, "c2")
   return result
 end function
 
@@ -1119,6 +1150,9 @@ function TestCase__FeatureFlag_PropertyGetters_wrongType() as string
   result = m.assertInvalid(ff.getStringProperty("booleanProp"))
   result += m.assertInvalid(ff.getBooleanProperty("intProp"))
   result += m.assertInvalid(ff.getNumberProperty("stringProp"))
+  result += m.assertInvalid(ff.getImageProperty("booleanProp"))
+  result += m.assertInvalid(ff.getTimestampProperty("booleanProp"))
+  result += m.assertInvalid(ff.getJSONProperty("booleanProp"))
   return result
 end function
 
@@ -1221,4 +1255,43 @@ function TestCase__logFeatureFlagImpression_onlyOncePerSession() as string
   end for
   m.reset_network_call()
   return ""
+end function
+
+' @Test
+function TestCase__isBlankOrEmpty() as string
+  utils = Braze()._privateApi.brazeUtils
+  result = m.AssertTrue(utils.isBlankOrEmpty(""))
+  result += m.AssertTrue(utils.isBlankOrEmpty(" "))
+  result += m.AssertTrue(utils.isBlankOrEmpty("  "))
+  result += m.AssertFalse(utils.isBlankOrEmpty("a "))
+  result += m.AssertFalse(utils.isBlankOrEmpty(" a"))
+  result += m.AssertFalse(utils.isBlankOrEmpty(" a "))
+  result += m.AssertFalse(utils.isBlankOrEmpty("  a "))
+  result += m.AssertFalse(utils.isBlankOrEmpty("   a"))
+  result += m.AssertFalse(utils.isBlankOrEmpty("abcdef"))
+  result += m.AssertTrue(utils.isBlankOrEmpty(invalid))
+  return result
+end function
+
+' @Test
+function TestCase__addUserAlias() as string
+  m.reset_network_call()
+  m.Braze.addUserAlias({ alias: "myAlias", label: "myLabel" })
+  test_network_call = m.get_test_network_call()
+  for each network_call in test_network_call
+    if network_call.postjson = invalid or network_call.postjson.events = invalid
+      continue for
+    end if
+
+    sent_event = network_call.postjson.events[0]
+    result = m.assertEqual(BrazeConstants().EVENT_TYPES.USER_ALIAS, sent_event.name)
+    result += m.assertEqual(sent_event.data[BrazeConstants().USER_ALIAS_EVENT_FIELDS.ALIAS_ID], "myAlias")
+    result += m.assertEqual(sent_event.data[BrazeConstants().USER_ALIAS_EVENT_FIELDS.LABEL_ID], "myLabel")
+    if result = ""
+      m.reset_network_call()
+      return ""
+    end if
+  end for
+  m.reset_network_call()
+  return "failure"
 end function

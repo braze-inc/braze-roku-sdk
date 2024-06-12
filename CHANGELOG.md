@@ -1,3 +1,11 @@
+## 2.2.0
+
+##### Added
+
+- Added support for new Feature Flag property types by adding `getJSONProperty(key)`, `getImageProperty(key)`, and `getTimestampProperty(key)` to `FeatureFlag`.
+- Added support for adding user alias with `m.Braze.addUserAlias(alias, label)`
+- Use `SetMessagePort()` instead of deprecated `SetPort()`. Thanks @chrisdp for pointing this out.
+
 ## 2.1.0
 
 ##### Added

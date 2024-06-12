@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "2.1.0"
+    SDK_VERSION: "2.2.0"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -64,7 +64,8 @@ function BrazeConstants() as object
     IAM_CONTROL_IMPRESSION: "iec",
     IAM_CLICK: "sc",
     IAM_BUTTON_CLICK: "sbc",
-    FF_IMPRESSION: "ffi"
+    FF_IMPRESSION: "ffi",
+    USER_ALIAS: "uae"
   }
 
   TRIGGER_FIELDS = {
@@ -193,6 +194,11 @@ function BrazeConstants() as object
     FTS: "fts"
   }
 
+  USER_ALIAS_EVENT_FIELDS = {
+    ALIAS_ID: "a",
+    LABEL_ID: "l"
+  }
+
   return {
     SCENE_GRAPH_EVENTS: SCENE_GRAPH_EVENTS
     SDK_DATA: SDK_DATA
@@ -216,6 +222,7 @@ function BrazeConstants() as object
     IAM_CLICK_EVENT_FIELDS: IAM_CLICK_EVENT_FIELDS
     IAM_BUTTON_CLICK_EVENT_FIELDS: IAM_BUTTON_CLICK_EVENT_FIELDS
     FF_IMPRESSION_EVENT_FIELDS: FF_IMPRESSION_EVENT_FIELDS
+    USER_ALIAS_EVENT_FIELDS: USER_ALIAS_EVENT_FIELDS
   }
 end function
 
@@ -545,6 +552,21 @@ function BrazeInit(config as object, messagePort as object)
 
     isNumeric: function(input as object) as boolean
       return m.isFloat(input) or m.isInt(input) or m.isLongInt(input)
+    end function,
+
+    isBlankOrEmpty: function(input as object) as boolean
+      if input = invalid or input = ""
+        return true
+      end if
+      len = Len(input)
+      ' The Mid function is 1-indexed, not 0-indexed
+      ' https://developer.roku.com/docs/references/brightscript/language/global-string-functions.md#mids-as-string-p-as-integer-n-as-integer-as-string
+      for i = 1 to len step 1
+        if Mid(input, i, 1) <> " "
+          return false
+        end if
+      end for
+      return true
     end function,
 
     setToEmptyJSONArrayIfInvalid: function(input as dynamic) as string
@@ -993,6 +1015,14 @@ function BrazeInit(config as object, messagePort as object)
       return event_object
     end function,
 
+    createUserAliasEvent: function(alias as string, label as string) as object
+      event_data = {}
+      event_data[BrazeConstants().USER_ALIAS_EVENT_FIELDS.ALIAS_ID] = alias
+      event_data[BrazeConstants().USER_ALIAS_EVENT_FIELDS.LABEL_ID] = label
+      event_object = m.createEventObject(BrazeConstants().EVENT_TYPES.USER_ALIAS, event_data)
+      return event_object
+    end function,
+
     createAttributeObject: function(name as string, properties) as object
       attribute_object = {}
       attribute_object[name] = properties
@@ -1117,7 +1147,7 @@ function BrazeInit(config as object, messagePort as object)
     postToUrl: function(url as string, postJson as object, headers = [] as object) as object
       request = CreateObject("roUrlTransfer")
       port = CreateObject("roMessagePort")
-      request.SetPort(port)
+      request.SetMessagePort(port)
       request.SetCertificatesFile("common:/certs/ca-bundle.crt")
       request.InitClientCertificates()
       request.SetUrl(url)
@@ -1386,6 +1416,20 @@ function BrazeInit(config as object, messagePort as object)
       end if
     end function,
 
+    addUserAlias: function(args as object) as void
+      m._privateApi.brazeLogger.debug("adding user alias", FormatJson(args))
+      utils = Braze()._privateApi.brazeUtils
+      alias = utils.truncateBrazeField(args.alias)
+      label = utils.truncateBrazeField(args.label)
+
+      if utils.isBlankOrEmpty(alias) or utils.isBlankOrEmpty(label)
+        m._privateApi.brazeLogger.debug("invalid args for addUserAlias", FormatJson(args))
+      else
+        event_object = m._privateApi.eventHandler.createUserAliasEvent(alias, label)
+        m._privateApi.eventHandler.logEvent(event_object)
+      end if
+    end function,
+
     sessionStart: function(args as object) as void
       session_uuid = m._privateapi.dataprovider.SessionIdProvider()
       m._privateApi.brazeLogger.debug("session starting", session_uuid)
@@ -1526,6 +1570,42 @@ function _createFeatureFlag(ff as object) as object
       for each prop in m.properties
         if prop = key
           if m.properties[prop].type = "number"
+            return m.properties[prop].value
+          else
+            return invalid
+          end if
+        end if
+      end for
+      return invalid
+    end function,
+    getTimestampProperty: function(key as string) as object
+      for each prop in m.properties
+        if prop = key
+          if m.properties[prop].type = "datetime"
+            return m.properties[prop].value
+          else
+            return invalid
+          end if
+        end if
+      end for
+      return invalid
+    end function,
+    getJSONProperty: function(key as string) as object
+      for each prop in m.properties
+        if prop = key
+          if m.properties[prop].type = "jsonobject"
+            return m.properties[prop].value
+          else
+            return invalid
+          end if
+        end if
+      end for
+      return invalid
+    end function,
+    getImageProperty: function(key as string) as object
+      for each prop in m.properties
+        if prop = key
+          if m.properties[prop].type = "image"
             return m.properties[prop].value
           else
             return invalid
@@ -1677,6 +1757,10 @@ function getBrazeInstance(task as object) as object
     
     logFeatureFlagImpression: function(featureFlagId as string) as void
       m.callInstanceMethod("logFeatureFlagImpression", { ffId: featureFlagId })
+    end function,
+
+    addUserAlias: function(alias as string, label as string) as void
+      m.callInstanceMethod("addUserAlias", { alias: alias, label: label })
     end function,
 
     callInstanceMethod: function(methodName as string, args as object) as void

@@ -42,6 +42,16 @@
 				"braze": {
 					"action": "setendpoint"
 				}
+			},
+			{
+				"longDescription": "Add User Alias.",
+				"thumbnail": "pkg:/images/adduseralias.png",
+				"id": "shortform-roku-streaming-overview",
+				"shortDescription": "Add a User Alias",
+				"title": "Add User Alias",
+				"braze": {
+					"action": "adduseralias"
+				}
 			}
 		]
 	},

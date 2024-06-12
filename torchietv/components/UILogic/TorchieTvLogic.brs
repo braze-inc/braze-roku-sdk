@@ -5,6 +5,8 @@
 sub HandleBrazeItem(item as Object)
     if item.action = "setuserid"
         promptForUserId()
+    else if item.action = "adduseralias"
+        promptForUserAlias()
     else if item.action = "setapikey"
         promptForApiKey()
     else if item.action = "showconfig"
@@ -121,6 +123,11 @@ sub promptForUserId()
     promptForValue()
 end sub
 
+sub promptForUserAlias()
+    m.promptType = "useralias"
+    promptForValue()
+end sub
+
 sub promptForFeatureFlag()
     m.promptType = "featureflag"
     promptForValue()
@@ -132,6 +139,10 @@ sub promptForValue()
     if m.promptType = "userid"
         m.promptdialog.title = "Braze UserID"
         currentVal = getStoredUserId()
+    else if m.promptType = "useralias"
+        m.promptdialog.title = "Braze User Alias"
+    else if m.promptType = "useraliaslabel"
+        m.promptdialog.title = "Braze User Alias Label"
     else if m.promptType = "apikey"
         m.promptdialog.title = "Braze API key"
         currentVal = getStoredValue("apikey")
@@ -162,6 +173,11 @@ sub promptForValueDismissed()
         setStoredUserId(newvalue)
         m.Braze.setUserId(newvalue)
         updateOverhangUser(newvalue)
+    else if m.promptType = "useralias"
+        m.useralias = newvalue
+    else if m.promptType = "useraliaslabel"
+        m.useraliaslabel = newvalue
+        m.Braze.addUserAlias(m.useralias, m.useraliaslabel)
     else if m.promptType = "apikey"
         setStoredValue("apikey", newvalue)
     else if m.promptType = "endpoint"
@@ -171,6 +187,12 @@ sub promptForValueDismissed()
         getSingleFeatureFlag(newvalue)
     end if
     m.promptdialog.close = true
+
+    ' Get the second half
+    if m.promptType = "useralias"
+        m.promptType = "useraliaslabel"
+        promptForValue()
+    end if
 end sub
 
 sub getAllFeatureFlags()
