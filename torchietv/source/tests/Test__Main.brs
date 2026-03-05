@@ -52,6 +52,10 @@ function TestSuite__Main() as object
   this.addTest("LogFeatureFlagImpressionOnlyOncePerSession", TestCase__logFeatureFlagImpression_onlyOncePerSession)
   this.addTest("BrazeUtils.isBlankOrEmpty", TestCase__isBlankOrEmpty)
   this.addTest("AddUserAlias", TestCase__addUserAlias)
+  this.addTest("UpdateTriggerWithTemplate_EmptyStringResponse_ReturnsInvalid", TestCase__UpdateTriggerWithTemplate_EmptyStringResponse_ReturnsInvalid)
+  this.addTest("UpdateTriggerWithTemplate_InvalidResponse_ReturnsInvalid", TestCase__UpdateTriggerWithTemplate_InvalidResponse_ReturnsInvalid)
+  this.addTest("UpdateTriggerWithTemplate_NonTemplateTrigger_ReturnsTrigger", TestCase__UpdateTriggerWithTemplate_NonTemplateTrigger_ReturnsTrigger)
+  this.addTest("UpdateTriggerWithTemplate_ValidResponse_AppendsTrigger", TestCase__UpdateTriggerWithTemplate_ValidResponse_AppendsTrigger)
   'TODO
   ' truncate function
   ' triggers
@@ -1294,4 +1298,80 @@ function TestCase__addUserAlias() as string
   end for
   m.reset_network_call()
   return "failure"
+end function
+
+' @Test
+function TestCase__UpdateTriggerWithTemplate_EmptyStringResponse_ReturnsInvalid() as string
+  trigger = { template_only: true, trigger_id: "test_trigger_id" }
+  original_request_template = Braze()._privateapi.eventhandler.requestTemplate
+
+  Braze()._privateapi.eventhandler.requestTemplate = function(trigger_id as string, trigger_event_type as string, data = invalid as dynamic)
+    return ""
+  end function
+
+  result_trigger = Braze()._privateapi.brazeutils.updateTriggerWithTemplate(trigger, "custom_event", {})
+  Braze()._privateapi.eventhandler.requestTemplate = original_request_template
+  return m.assertInvalid(result_trigger)
+end function
+
+' @Test
+function TestCase__UpdateTriggerWithTemplate_InvalidResponse_ReturnsInvalid() as string
+  trigger = { template_only: true, trigger_id: "test_trigger_id" }
+  original_request_template = Braze()._privateapi.eventhandler.requestTemplate
+
+  Braze()._privateapi.eventhandler.requestTemplate = function(trigger_id as string, trigger_event_type as string, data = invalid as dynamic)
+    return invalid
+  end function
+
+  result_trigger = Braze()._privateapi.brazeutils.updateTriggerWithTemplate(trigger, "custom_event", {})
+  Braze()._privateapi.eventhandler.requestTemplate = original_request_template
+  return m.assertInvalid(result_trigger)
+end function
+
+' @Test
+function TestCase__UpdateTriggerWithTemplate_NonTemplateTrigger_ReturnsTrigger() as string
+  trigger = { template_only: false, trigger_id: "test_trigger_id" }
+  result_trigger = Braze()._privateapi.brazeutils.updateTriggerWithTemplate(trigger, "custom_event", {})
+  result = m.assertNotInvalid(result_trigger)
+  result += m.assertEqual(result_trigger.trigger_id, "test_trigger_id")
+  return result
+end function
+
+' @Test
+function TestCase__UpdateTriggerWithTemplate_ValidResponse_AppendsTrigger() as string
+  trigger = { template_only: true, trigger_id: "test_trigger_id" }
+  original_request_template = Braze()._privateapi.eventhandler.requestTemplate
+
+  template_data = {
+    templated_message: {
+      data: {
+        message: "hello",
+        type: "SLIDEUP",
+        trigger_id: "test_trigger_id",
+        extras: {},
+        header: "",
+        image_url: "",
+        is_control: false,
+        uri: "",
+        duration: 5000,
+        click_action: "NONE",
+        message_close: "AUTO_DISMISS"
+      },
+      type: "inapp"
+    }
+  }
+  mock_response = FormatJson(template_data)
+
+  Braze()._privateapi.eventhandler.mock_response = mock_response
+  Braze()._privateapi.eventhandler.requestTemplate = function(trigger_id as string, trigger_event_type as string, data = invalid as dynamic)
+    return m.mock_response
+  end function
+
+  result_trigger = Braze()._privateapi.brazeutils.updateTriggerWithTemplate(trigger, "custom_event", {})
+  Braze()._privateapi.eventhandler.requestTemplate = original_request_template
+
+  result = m.assertNotInvalid(result_trigger)
+  result += m.assertEqual(result_trigger.message, "hello")
+  result += m.assertEqual(result_trigger.message_type, "SLIDEUP")
+  return result
 end function
