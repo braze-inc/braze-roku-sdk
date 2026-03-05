@@ -1,4 +1,9 @@
-# Roku SDK
+<p align="center">
+  <img width="480" alt="Braze Logo" src=".github/assets/logo-light.png#gh-light-mode-only" />
+  <img width="480" alt="Braze Logo" src=".github/assets/logo-dark.png#gh-dark-mode-only" />
+</p>
+
+# Braze Roku SDK
 
 Successful marketing automation is essential to the future of your mobile app. Braze helps you engage your users beyond the download. Visit the following links for details and we'll have you up and running in no time!
 

@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "2.2.0"
+    SDK_VERSION: "2.2.1"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -803,7 +803,7 @@ function BrazeInit(config as object, messagePort as object)
         remove_trigger = true
         if template_response_raw <> invalid
           template_response = ParseJson(template_response_raw)
-          if template_response.templated_message <> invalid
+          if template_response <> invalid and template_response.templated_message <> invalid
             updated_trigger = Braze()._privateapi.brazeutils.transformTrigger(template_response.templated_message)
             if Braze()._privateapi.brazeutils.inArray(updated_trigger.message_type, BrazeConstants().TRIGGER_FILTER_ALLOWED_TYPES)
               trigger.Append(updated_trigger)
