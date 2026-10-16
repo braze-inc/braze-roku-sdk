@@ -1,3 +1,8 @@
+## Unreleased
+
+##### Changed
+- Removed the deprecated `roUrlTransfer.InitClientCertificates()` call from SDK network requests. Roku will block publishing apps that still call it starting April 1, 2027. HTTPS server verification via `SetCertificatesFile()` is unchanged. `GetDeviceAttestation()` is not added here, because this SDK does not ask Braze to verify that a request came from a Roku device.
+
 ## 2.2.1
 
 ##### Fixed
