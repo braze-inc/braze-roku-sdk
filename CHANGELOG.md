@@ -1,3 +1,8 @@
+## Unreleased
+
+##### Changed
+- Removed the deprecated `roUrlTransfer.InitClientCertificates()` call from SDK network requests. Roku will block publishing apps that still call it starting April 1, 2027. HTTPS server verification via `SetCertificatesFile()` is unchanged.
+
 ## 2.2.1
 
 ##### Fixed
