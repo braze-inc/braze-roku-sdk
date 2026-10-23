@@ -33,4 +33,12 @@ SceneGraphTutorial/source/BrazeSDK.brs
 SceneGraphTutorial/components/BrazeTask.brs
 SceneGraphTutorial/components/BrazeTask.xml
 
+# Node tooling (BrighterScript, lint, formatter, tests)
+node_modules/
+.build/
+dist/
+coverage/
+*.log
+.DS_Store
+
 # End of https://www.gitignore.io/api/osx

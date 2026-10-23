@@ -5,7 +5,6 @@
 sub Init()
     m.BrazeTask = CreateObject("roSGNode", "BrazeTask")
     m.Braze = getBrazeInstance(m.BrazeTask)
-    m.BrazeTask.ObserveField("BrazeInAppMessage", "onInAppMessageTriggered")
     m.BrazeTask.ObserveField("BrazeFeatureFlagsUpdated", "onFeatureFlagChanges")
 
     ' set background color for scene. Applied only if backgroundUri has empty value
@@ -46,42 +45,78 @@ end function
 sub reclaimFocus()
     m.top.removeChild(m.customMsg)
     m.customMsg = invalid
-    m.oldfocus.setFocus(true)
-  end sub
+    if m.oldfocus <> invalid then m.oldfocus.setFocus(true)
+end sub
 
-sub onInAppMessageTriggered()
-    in_app_message = m.BrazeTask.BrazeInAppMessage
-    if in_app_message <> invalid and in_app_message.message <> invalid
-      ' If we have a KVP of "msgtype" with a value of "sidebyside", that means we want to render this
-      ' using the "CustomSideBySideInAppMessage" object. We could have multiple types of custom
-      ' In App Messages supported
-      if in_app_message.extras <> invalid and in_app_message.extras.msgtype = "sidebyside"
+function getDeepestFocusedNode(node as object) as object
+    if node = invalid then return invalid
+    child = node.focusedChild
+    if child = invalid or child.isSameNode(node) then return node
+    return getDeepestFocusedNode(child)
+end function
+
+' Optional SDK hook: return true to display a custom IAM layout instead of the default dialog.
+function brazeHandleCustomInAppMessage(in_app_message as object) as boolean
+    if in_app_message.extras <> invalid and in_app_message.extras.msgtype = "sidebyside"
         m.customMsg = CreateObject("roSGNode", "CustomSideBySideInAppMessage")
-        ' Hack for now
-        m.oldfocus = m.top.focusedChild
-        while (m.oldfocus.focusedChild <> invalid and not(m.oldfocus.isSameNode(m.oldfocus.focusedChild)))
-            m.oldfocus = m.oldfocus.focusedChild
-        end while
+        m.oldfocus = getDeepestFocusedNode(m.top.focusedChild)
 
         m.top.appendChild(m.customMsg)
         m.customMsg.BrazeTask = m.Braze.BrazeTask
         m.customMsg.inappmessage = in_app_message
         m.customMsg.setFocus(true)
         m.customMsg.ObserveField("isClosed", "reclaimFocus")
-      else
-        ' Our default In App Message. This happens to be based on a Roku Dialog
-        dialog = createObject("roSGNode", "BrazeInAppMessage")
-        dialog.BrazeTask = m.Braze.BrazeTask
-        dialog.inappmessage = in_app_message
-        m.oldfocus = m.top.focusedChild
-        while (m.oldfocus.focusedChild <> invalid and not(m.oldfocus.isSameNode(m.oldfocus.focusedChild)))
-            m.oldfocus = m.oldfocus.focusedChild
-        end while
-        m.top.dialog = dialog
-      end if
-      m.BrazeTask.BrazeInAppMessage = invalid
+        return true
     end if
-  end sub
+    return false
+end function
+
+' Optional SDK hook: process click_action / uri after the default IAM closes.
+' event.button is invalid when the message has no buttons (body click). Back does not call this.
+' Sample: dashboard URI containing "details" (e.g. torchie://details) opens the details screen.
+function brazeHandleInAppMessageClick(event as object) as boolean
+    print "brazeHandleInAppMessageClick"
+    if event = invalid then return false
+    target = event.button
+    if target = invalid then target = event.in_app_message
+    if target = invalid then return false
+
+    uri = iamUriToString(target.uri)
+    print "IAM click action="; target.click_action; " uri="; uri
+    if uri = "" then return false
+    if Instr(1, LCase(uri), "details") = 0 then return false
+
+    OpenIamTestDetails()
+    return true
+end function
+
+sub OpenIamTestDetails()
+    if m.GridScreen = invalid or m.GridScreen.content = invalid then return
+    rows = m.GridScreen.content
+    for r = 0 to rows.GetChildCount() - 1
+        row = rows.GetChild(r)
+        if row <> invalid
+            for c = 0 to row.GetChildCount() - 1
+                item = row.GetChild(c)
+                if item <> invalid and item.braze = invalid
+                    m.selectedIndex = [r, c]
+                    ShowDetailsScreen(row, c)
+                    return
+                end if
+            end for
+        end if
+    end for
+end sub
+
+function iamUriToString(uri as dynamic) as string
+    if uri = invalid then return ""
+    uriType = Type(uri)
+    if uriType = "String" or uriType = "roString" then return uri
+    if uriType = "Integer" or uriType = "roInt" or uriType = "Float" or uriType = "roFloat" or uriType = "Double"
+        return StrI(CInt(uri)).Trim()
+    end if
+    return ""
+end function
   
 sub onFeatureFlagChanges()
   print "On FeatureFlag Changes()"

@@ -56,6 +56,25 @@ function TestSuite__Main() as object
   this.addTest("UpdateTriggerWithTemplate_InvalidResponse_ReturnsInvalid", TestCase__UpdateTriggerWithTemplate_InvalidResponse_ReturnsInvalid)
   this.addTest("UpdateTriggerWithTemplate_NonTemplateTrigger_ReturnsTrigger", TestCase__UpdateTriggerWithTemplate_NonTemplateTrigger_ReturnsTrigger)
   this.addTest("UpdateTriggerWithTemplate_ValidResponse_AppendsTrigger", TestCase__UpdateTriggerWithTemplate_ValidResponse_AppendsTrigger)
+  this.addTest("AutomaticIamDisplayDefaultsFalse", TestCase__AutomaticIamDisplay_DefaultsFalse)
+  this.addTest("AutomaticIamDisplayCanBeEnabled", TestCase__AutomaticIamDisplay_CanBeEnabled)
+  this.addTest("AutomaticIamDisplayCanBeDisabled", TestCase__AutomaticIamDisplay_CanBeDisabled)
+  this.addTest("DefaultIamUiAvailableUsesCachedValue", TestCase__DefaultIamUiAvailable_UsesCachedValue)
+  this.addTest("SdkInAppMessageUiRejectsOldSampleComponent", TestCase__SdkInAppMessageUi_RejectsOldSampleComponent)
+  this.addTest("SdkInAppMessageUiRequiresOverlayFields", TestCase__SdkInAppMessageUi_RequiresOverlayFields)
+  this.addTest("OnInAppMessageReceivedLeavesFieldWhenDefaultUiMissing", TestCase__OnInAppMessageReceived_LeavesFieldWhenDefaultUiMissing)
+  this.addTest("RejectedInAppMessageKeepsPendingMessage", TestCase__RejectedInAppMessage_KeepsPendingMessage)
+  this.addTest("ModalInAppMessageReplacesPendingMessage", TestCase__ModalInAppMessage_ReplacesPendingMessage)
+  this.addTest("RegisterInAppMessageObserverSafeWithInvalidTask", TestCase__RegisterInAppMessageObserver_SafeWithInvalidTask)
+  this.addTest("BuildInAppMessageClickEvent", TestCase__BuildInAppMessageClickEvent)
+  this.addTest("InAppMessageDisplayableRequiresMessage", TestCase__InAppMessageDisplayable_RequiresMessage)
+  this.addTest("InAppMessageDisplayDelayIgnoresMissingAndNonPositive", TestCase__InAppMessageDisplayDelay_IgnoresMissingAndNonPositive)
+  this.addTest("InAppMessageDisplayDelayReturnsPositiveSeconds", TestCase__InAppMessageDisplayDelay_ReturnsPositiveSeconds)
+  this.addTest("SupportedAutomaticIamTypes", TestCase__SupportedAutomaticIamTypes)
+  this.addTest("UnsupportedAutomaticIamTypes", TestCase__UnsupportedAutomaticIamTypes)
+  this.addTest("UnsupportedIamTypeLogMessage", TestCase__UnsupportedIamTypeLogMessage)
+  this.addTest("MissingDefaultIamUiLogMessage", TestCase__MissingDefaultIamUiLogMessage)
+  this.addTest("ToColorMovesAlphaToEnd", TestCase__ToColor_MovesAlphaToEnd)
   'TODO
   ' truncate function
   ' triggers
@@ -908,7 +927,6 @@ end function
 ' @Test
 function TestCase__Instance_Method_Doesnt_End_Non_Existent_Session() as string
   args = {}
-  test_session_id = "422f636b-fdf2-48c4-8d0f-63ecc9b44ce7"
   sec = CreateObject("roRegistrySection", "braze.section.session")
   sec.Delete("uuid")
   sec.Delete("start")
@@ -1373,5 +1391,233 @@ function TestCase__UpdateTriggerWithTemplate_ValidResponse_AppendsTrigger() as s
   result = m.assertNotInvalid(result_trigger)
   result += m.assertEqual(result_trigger.message, "hello")
   result += m.assertEqual(result_trigger.message_type, "SLIDEUP")
+  return result
+end function
+
+' @Test
+function TestCase__AutomaticIamDisplay_DefaultsFalse() as string
+  aa = GetGlobalAA()
+  original_global = aa.global
+  aa.global = invalid
+  result = m.assertFalse(BrazeIsAutomaticInAppMessageDisplayEnabled())
+  aa.global = { brazeConfig: {} }
+  result += m.assertFalse(BrazeIsAutomaticInAppMessageDisplayEnabled())
+  aa.global = original_global
+  return result
+end function
+
+' @Test
+function TestCase__AutomaticIamDisplay_CanBeEnabled() as string
+  aa = GetGlobalAA()
+  original_global = aa.global
+  config = {}
+  config[BrazeConstants().BRAZE_CONFIG_FIELDS.AUTOMATIC_IAM_DISPLAY] = true
+  aa.global = { brazeConfig: config }
+  result = m.assertTrue(BrazeIsAutomaticInAppMessageDisplayEnabled())
+  aa.global = original_global
+  return result
+end function
+
+' @Test
+function TestCase__AutomaticIamDisplay_CanBeDisabled() as string
+  aa = GetGlobalAA()
+  original_global = aa.global
+  config = {}
+  config[BrazeConstants().BRAZE_CONFIG_FIELDS.AUTOMATIC_IAM_DISPLAY] = false
+  aa.global = { brazeConfig: config }
+  result = m.assertFalse(BrazeIsAutomaticInAppMessageDisplayEnabled())
+  aa.global = original_global
+  return result
+end function
+
+' @Test
+function TestCase__DefaultIamUiAvailable_UsesCachedValue() as string
+  aa = GetGlobalAA()
+  original = aa.brazeDefaultIamUiAvailable
+  aa.brazeDefaultIamUiAvailable = false
+  result = m.assertFalse(BrazeIsDefaultInAppMessageUiAvailable())
+  aa.brazeDefaultIamUiAvailable = true
+  result += m.assertTrue(BrazeIsDefaultInAppMessageUiAvailable())
+  aa.brazeDefaultIamUiAvailable = original
+  return result
+end function
+
+function iamUiStub(hasOverlayFields as boolean) as object
+  return {
+    hasOverlay: hasOverlayFields
+    hasField: function(name as string) as boolean
+      if name = "isClosed" or name = "pendingClickEvent" then return m.hasOverlay
+      return name = "inappmessage" or name = "BrazeTask"
+    end function
+  }
+end function
+
+' @Test
+function TestCase__SdkInAppMessageUi_RejectsOldSampleComponent() as string
+  result = m.assertFalse(BrazeIsSdkInAppMessageUi(invalid))
+  result += m.assertFalse(BrazeIsSdkInAppMessageUi({}))
+  result += m.assertFalse(BrazeIsSdkInAppMessageUi(iamUiStub(false)))
+  return result
+end function
+
+' @Test
+function TestCase__SdkInAppMessageUi_RequiresOverlayFields() as string
+  return m.assertTrue(BrazeIsSdkInAppMessageUi(iamUiStub(true)))
+end function
+
+' @Test
+function TestCase__OnInAppMessageReceived_LeavesFieldWhenDefaultUiMissing() as string
+  aa = GetGlobalAA()
+  original_global = aa.global
+  original_available = aa.brazeDefaultIamUiAvailable
+  original_task = aa.brazeTaskForInAppMessage
+  config = {}
+  config[BrazeConstants().BRAZE_CONFIG_FIELDS.AUTOMATIC_IAM_DISPLAY] = true
+  aa.global = { brazeConfig: config }
+  aa.brazeDefaultIamUiAvailable = false
+  message = { message: "hello", message_type: "MODAL" }
+  aa.brazeTaskForInAppMessage = { BrazeInAppMessage: message }
+  BrazeOnInAppMessageReceived()
+  result = m.assertEqual(aa.brazeTaskForInAppMessage.BrazeInAppMessage.message, "hello")
+  aa.global = original_global
+  aa.brazeDefaultIamUiAvailable = original_available
+  aa.brazeTaskForInAppMessage = original_task
+  return result
+end function
+
+function receiveWithPendingInAppMessage(incoming as object) as object
+  aa = GetGlobalAA()
+  original_global = aa.global
+  original_available = aa.brazeDefaultIamUiAvailable
+  original_task = aa.brazeTaskForInAppMessage
+  config = {}
+  config[BrazeConstants().BRAZE_CONFIG_FIELDS.AUTOMATIC_IAM_DISPLAY] = true
+  config[BrazeConstants().BRAZE_CONFIG_FIELDS.LOGGING_ENABLED] = false
+  aa.global = { brazeConfig: config }
+  aa.brazeDefaultIamUiAvailable = true
+  timer = { control: "start" }
+  aa.brazePendingInAppMessage = { message: "waiting", message_type: "MODAL", display_delay: 5 }
+  aa.brazeInAppMessageDelayTimer = timer
+  aa.brazeTaskForInAppMessage = { BrazeInAppMessage: incoming }
+  BrazeOnInAppMessageReceived()
+  received = { pending: aa.brazePendingInAppMessage, timer_control: timer.control }
+  BrazeCancelPendingInAppMessage()
+  aa.global = original_global
+  aa.brazeDefaultIamUiAvailable = original_available
+  aa.brazeTaskForInAppMessage = original_task
+  return received
+end function
+
+' @Test
+function TestCase__RejectedInAppMessage_KeepsPendingMessage() as string
+  unsupported = receiveWithPendingInAppMessage({ message: "slideup", message_type: "SLIDEUP" })
+  result = m.assertNotInvalid(unsupported.pending)
+  result += m.assertEqual(unsupported.timer_control, "start")
+  empty = receiveWithPendingInAppMessage({ message_type: "MODAL" })
+  result += m.assertNotInvalid(empty.pending)
+  result += m.assertEqual(empty.timer_control, "start")
+  return result
+end function
+
+' @Test
+function TestCase__ModalInAppMessage_ReplacesPendingMessage() as string
+  replaced = receiveWithPendingInAppMessage({ message: "later", message_type: "MODAL" })
+  result = m.assertInvalid(replaced.pending)
+  result += m.assertEqual(replaced.timer_control, "stop")
+  return result
+end function
+
+' @Test
+function TestCase__RegisterInAppMessageObserver_SafeWithInvalidTask() as string
+  result = m.assertFalse(BrazeRegisterInAppMessageObserver(invalid))
+  result += m.assertFalse(BrazeRegisterInAppMessageObserver({}))
+  return result
+end function
+
+' @Test
+function TestCase__BuildInAppMessageClickEvent() as string
+  bodyEvent = BrazeBuildInAppMessageClickEvent({ message: "hi", click_action: "URI", uri: "roku://home" }, -1)
+  result = m.assertInvalid(bodyEvent.button)
+  result += m.assertEqual(bodyEvent.button_index, -1)
+  result += m.assertEqual(bodyEvent.in_app_message.uri, "roku://home")
+
+  button = { text: "Go", click_action: "URI", uri: "roku://details", id: 0 }
+  buttonEvent = BrazeBuildInAppMessageClickEvent({ message: "hi", buttons: [button] }, 0)
+  result += m.assertEqual(buttonEvent.button.uri, "roku://details")
+  result += m.assertEqual(buttonEvent.button_index, 0)
+
+  missingEvent = BrazeBuildInAppMessageClickEvent({ message: "hi", buttons: [button] }, 1)
+  result += m.assertInvalid(missingEvent.button)
+  return result
+end function
+
+' @Test
+function TestCase__InAppMessageDisplayable_RequiresMessage() as string
+  result = m.assertFalse(BrazeIsInAppMessageDisplayable(invalid))
+  result += m.assertFalse(BrazeIsInAppMessageDisplayable({}))
+  result += m.assertTrue(BrazeIsInAppMessageDisplayable({ message: "hello" }))
+  return result
+end function
+
+' @Test
+function TestCase__InAppMessageDisplayDelay_IgnoresMissingAndNonPositive() as string
+  result = m.assertEqual(BrazeGetInAppMessageDisplayDelay(invalid), 0)
+  result += m.assertEqual(BrazeGetInAppMessageDisplayDelay({}), 0)
+  result += m.assertEqual(BrazeGetInAppMessageDisplayDelay({ display_delay: 0 }), 0)
+  result += m.assertEqual(BrazeGetInAppMessageDisplayDelay({ display_delay: -1 }), 0)
+  return result
+end function
+
+' @Test
+function TestCase__InAppMessageDisplayDelay_ReturnsPositiveSeconds() as string
+  result = m.assertEqual(BrazeGetInAppMessageDisplayDelay({ display_delay: 5 }), 5)
+  return result
+end function
+
+' @Test
+function TestCase__SupportedAutomaticIamTypes() as string
+  result = m.assertTrue(BrazeIsSupportedAutomaticInAppMessageType("MODAL"))
+  return result
+end function
+
+' @Test
+function TestCase__UnsupportedAutomaticIamTypes() as string
+  result = m.assertFalse(BrazeIsSupportedAutomaticInAppMessageType(invalid))
+  result += m.assertFalse(BrazeIsSupportedAutomaticInAppMessageType("SLIDEUP"))
+  result += m.assertFalse(BrazeIsSupportedAutomaticInAppMessageType("MODAL_STYLED"))
+  result += m.assertFalse(BrazeIsSupportedAutomaticInAppMessageType("FULL"))
+  result += m.assertFalse(BrazeIsSupportedAutomaticInAppMessageType("HTML"))
+  result += m.assertFalse(BrazeIsSupportedAutomaticInAppMessageType("HTML_FULL"))
+  return result
+end function
+
+' @Test
+function TestCase__UnsupportedIamTypeLogMessage() as string
+  printed = BrazeGetUnsupportedInAppMessageLogMessage("SLIDEUP")
+  result = m.assertTrue(Instr(1, printed, "SLIDEUP") > 0)
+  result += m.assertTrue(Instr(1, printed, "not supported") > 0)
+  htmlPrinted = BrazeGetUnsupportedInAppMessageLogMessage("HTML_FULL")
+  result += m.assertTrue(Instr(1, htmlPrinted, "HTML_FULL") > 0)
+  result += m.assertTrue(Instr(1, htmlPrinted, "not supported") > 0)
+  return result
+end function
+
+' @Test
+function TestCase__MissingDefaultIamUiLogMessage() as string
+  printed = BrazeGetMissingDefaultInAppMessageUiLogMessage()
+  result = m.assertTrue(Instr(1, printed, "BrazeDefaultInAppMessage") > 0)
+  result += m.assertTrue(Instr(1, printed, "automatic_iam_display") > 0)
+  return result
+end function
+
+' @Test
+function TestCase__ToColor_MovesAlphaToEnd() as string
+  utils = Braze()._privateApi.brazeUtils
+  ' Payload colors are ARGB, e.g. dashboard #1B78CF arrives as 0xFF1B78CF.
+  colors = ParseJson("[4279990479, 3204448256, 0]")
+  result = m.assertInvalid(utils.toColor(invalid))
+  result += m.assertEqual(LCase(utils.toColor(colors[0])), "0x1b78cfff")
+  result += m.assertEqual(LCase(utils.toColor(colors[1])), "0x000000bf")
+  result += m.assertEqual(LCase(utils.toColor(colors[2])), "0x00000000")
   return result
 end function

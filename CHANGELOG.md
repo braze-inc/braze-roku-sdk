@@ -1,4 +1,13 @@
-## Unreleased
+## 2.3.0
+
+[Release Date](https://github.com/braze-inc/braze-roku-sdk/releases/tag/v2.3.0)
+
+##### Added
+- Added optional automatic display of modal in-app messages using the new `BrazeDefaultInAppMessage` component.
+  - This is off by default. Set `automatic_iam_display` to `true` to turn it on. Existing custom in-app message UI is unchanged.
+- Added `brazeHandleCustomInAppMessage` so apps can render specific messages with their own UI while using the default IAM UI for the rest.
+- Added `brazeHandleInAppMessageClick` so apps can process in-app message `click_action` / `uri` while using the default IAM UI.
+- Added `logging_enabled` configuration option. Set to `false` in your Braze config to suppress SDK console logging.
 
 ##### Changed
 - Removed the deprecated `roUrlTransfer.InitClientCertificates()` call from SDK network requests. Roku will block publishing apps that still call it starting April 1, 2027. HTTPS server verification via `SetCertificatesFile()` is unchanged.
