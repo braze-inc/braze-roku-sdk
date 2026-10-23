@@ -9,6 +9,9 @@
 - Added `brazeHandleInAppMessageClick` so apps can process in-app message `click_action` / `uri` while using the default IAM UI.
 - Added `logging_enabled` configuration option. Set to `false` in your Braze config to suppress SDK console logging.
 
+##### Changed
+- Removed the deprecated `roUrlTransfer.InitClientCertificates()` call from SDK network requests. Roku will block publishing apps that still call it starting April 1, 2027. HTTPS server verification via `SetCertificatesFile()` is unchanged.
+
 ## 2.2.1
 
 ##### Fixed
