@@ -11,7 +11,6 @@ sub GetContent()
     ' request the content feed from the API
     rsp = ReadAsciiFile("pkg://roku-sample-feed.json")
     rootChildren = []
-    rows = {}
 
     ' parse the feed and build a tree of ContentNodes to populate the GridView
     json = ParseJson(rsp)

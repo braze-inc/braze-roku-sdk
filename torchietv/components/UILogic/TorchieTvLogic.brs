@@ -205,7 +205,7 @@ end sub
 sub getSingleFeatureFlag(flagKey as String) 
     ff = m.braze.getFeatureFlag(flagKey)
     if ff = invalid
-        print "Feature Flag id: " ff.id + " does not exist"
+        print "Feature Flag id: " flagKey + " does not exist"
     else
         print "Feature Flag id: " ff.id + " enabled: " + ff.enabled.toStr()
     end if
@@ -213,8 +213,8 @@ end sub
 
 sub updateOverhangUser(userid as String) 
     overhang = m.top.FindNode("overhang")
-    if userId <> "" 
-        overhang.optionsText = "User ID: " + userId
+    if userid <> "" 
+        overhang.optionsText = "User ID: " + userid
       else
         overhang.optionsText = "No userID"
       endif

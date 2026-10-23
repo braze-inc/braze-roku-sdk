@@ -1,0 +1,59 @@
+{
+  "rootDir": ".",
+  "files": [
+    "source/**/*",
+    "components/**/*",
+    "manifest"
+  ],
+  "createPackage": false,
+  "copyToStaging": false,
+  "autoImportComponentScript": false,
+  "diagnosticLevel": "warn",
+  "plugins": [
+    "@rokucommunity/bslint"
+  ],
+  "ignores": [
+    "source/testFramework/**"
+  ],
+  "rules": {
+    "assign-all-paths": "error",
+    "unreachable-code": "error",
+    "case-sensitivity": "error",
+    "consistent-return": "error",
+    "no-stop": "error",
+    "unused-variable": "warn",
+    "unused-parameter": "off",
+    "unsafe-iterators": "warn",
+    "unsafe-path-loop": "warn",
+    "block-if-style": "off",
+    "inline-if-style": "off",
+    "condition-style": "off",
+    "named-function-style": "off",
+    "anon-function-style": "off",
+    "aa-comma-style": "off",
+    "type-annotations": "off",
+    "no-print": "off",
+    "no-todo": "off",
+    "eol-last": "off",
+    "color-format": "off",
+    "color-case": "off",
+    "color-alpha": "off",
+    "color-alpha-defaults": "off",
+    "color-cert": "off",
+    "no-assocarray-component-field-type": "off",
+    "no-array-component-field-type": "off"
+  },
+  "diagnosticSeverityOverrides": {
+    "1001": "error",
+    "1002": "error",
+    "1003": "error",
+    "1004": "error",
+    "1012": "error",
+    "1017": "error",
+    "1025": "error",
+    "1067": "error",
+    "1068": "error",
+    "1070": "error",
+    "1013": "hint"
+  }
+}

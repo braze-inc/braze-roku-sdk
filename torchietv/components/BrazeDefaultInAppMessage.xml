@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<component name="BrazeDefaultInAppMessage" extends="Rectangle">
+<interface>
+   <field id="inappmessage" type="assocarray" alwaysNotify="true" />
+   <field id="BrazeTask" type="node"/>
+   <field id="isClosed" type="boolean" />
+   <field id="pendingClickEvent" type="assocarray" />
+</interface>
+
+<children>
+    <Rectangle id="iamCard">
+        <LayoutGroup id="iamCardContent" layoutDirection="vert">
+            <Poster id="inappmessageimage" loadDisplayMode="scaleToFit" />
+            <Label id="inappmessageheader" wrap="true" maxLines="1" ellipsizeOnBoundary="true" horizAlign="center" font="font:MediumBoldSystemFont" />
+            <Label id="inappmessagebody" wrap="true" maxLines="6" ellipsizeOnBoundary="true" horizAlign="center" font="font:SmallSystemFont" />
+            <Rectangle id="iamButtonWrap">
+                <Group id="iamButton1">
+                    <Rectangle id="iamButton1Border" />
+                    <Rectangle id="iamButton1Bg" />
+                    <Label id="iamButton1Label" horizAlign="center" vertAlign="center" font="font:MediumBoldSystemFont" />
+                </Group>
+                <Group id="iamButton2">
+                    <Rectangle id="iamButton2Border" />
+                    <Rectangle id="iamButton2Bg" />
+                    <Label id="iamButton2Label" horizAlign="center" vertAlign="center" font="font:MediumBoldSystemFont" />
+                </Group>
+            </Rectangle>
+            <Rectangle id="iamCardBottomPad" />
+        </LayoutGroup>
+        <Group id="iamCloseButton">
+            <Rectangle id="iamCloseButtonBg" />
+            <Label id="iamCloseButtonLabel" text="×" horizAlign="center" vertAlign="center" font="font:MediumBoldSystemFont" />
+            <Group id="iamCloseButtonRing">
+                <Rectangle id="iamCloseButtonRingTop" />
+                <Rectangle id="iamCloseButtonRingBottom" />
+                <Rectangle id="iamCloseButtonRingLeft" />
+                <Rectangle id="iamCloseButtonRingRight" />
+            </Group>
+        </Group>
+    </Rectangle>
+</children>
+  <!-- Relative to this file, so the three BrazeDefaultInAppMessage files can live in any folder under components/ as long as they stay together. -->
+  <script type="text/brightscript" uri="BrazeDefaultInAppMessageStyles.brs"/>
+  <script type="text/brightscript" uri="BrazeDefaultInAppMessage.brs"/>
+  <script type="text/brightscript" uri="pkg:/source/BrazeSDK.brs"/>
+</component>

@@ -13,8 +13,8 @@ sub ShowChannelRSGScreen()
     screen = CreateObject("roSGScreen")
     m.port = CreateObject("roMessagePort")
     screen.SetMessagePort(m.port)
-    scene = screen.CreateScene("MainScene")
-    ConfigureBrazeSdk(screen.getGlobalNode())
+    ConfigureBrazeSdk(screen.GetGlobalNode())
+    screen.CreateScene("MainScene")
     screen.Show() 
 
     while(true)
@@ -31,8 +31,9 @@ sub ConfigureBrazeSdk(globalNode as object)
     config_fields = BrazeConstants().BRAZE_CONFIG_FIELDS
 
     config[config_fields.API_KEY] = "5c636baa-dfa4-453a-9484-cb6dc7727988"
-    config[config_fields.ENDPOINT] = "https://sondheim.appboy.com/"
+    config[config_fields.ENDPOINT] = "https://sondheim.braze.com/"
     config[config_fields.HEARTBEAT_FREQ_IN_SECONDS] = 30
+    config[config_fields.AUTOMATIC_IAM_DISPLAY] = true
     ' Uncomment the line below to NOT cache feature flags and save registry space
     'config[config_fields.FF_CACHE_DISABLED] = true
 

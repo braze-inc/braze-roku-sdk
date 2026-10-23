@@ -1,4 +1,4 @@
-Copyright (c) 2021 Braze, Inc.
+Copyright (c) 2026 Braze, Inc.
 All rights reserved.
 
 * Use of source code or binaries contained within Braze’s SDKs is permitted only to enable use of the Braze platform by customers of Braze.

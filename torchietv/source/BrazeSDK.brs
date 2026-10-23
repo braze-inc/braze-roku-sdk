@@ -1,6 +1,6 @@
 function BrazeConstants() as object
   SDK_DATA = {
-    SDK_VERSION: "2.2.1"
+    SDK_VERSION: "2.3.0"
   }
 
   SCENE_GRAPH_EVENTS = {
@@ -11,7 +11,9 @@ function BrazeConstants() as object
     API_KEY: "api-key",
     ENDPOINT: "endpoint",
     HEARTBEAT_FREQ_IN_SECONDS: "hbfreq",
-    FF_CACHE_DISABLED: "ff_cache_disable"
+    FF_CACHE_DISABLED: "ff_cache_disable",
+    LOGGING_ENABLED: "logging_enabled",
+    AUTOMATIC_IAM_DISPLAY: "automatic_iam_display"
   }
 
   BRAZE_STORAGE = {
@@ -150,6 +152,10 @@ function BrazeConstants() as object
     "HTML"
   ]
 
+  IAM_AUTOMATIC_DISPLAY_TYPES = [
+    "MODAL"
+  ]
+
   TRIGGER_COMPARATORS = {
     EQUALS: 1,
     NOT_EQUAL: 2,
@@ -214,6 +220,7 @@ function BrazeConstants() as object
     TRIGGER_CONDITION_FIELDS: TRIGGER_CONDITION_FIELDS
     TRIGGER_CONDITION_DATA_FIELDS: TRIGGER_CONDITION_DATA_FIELDS
     TRIGGER_FILTER_ALLOWED_TYPES: TRIGGER_FILTER_ALLOWED_TYPES
+    IAM_AUTOMATIC_DISPLAY_TYPES: IAM_AUTOMATIC_DISPLAY_TYPES
     TRIGGER_FILTER_FIELDS: TRIGGER_FILTER_FIELDS
     TRIGGER_FILTER_PROPERTY_TYPES: TRIGGER_FILTER_PROPERTY_TYPES
     TRIGGER_TYPES: TRIGGER_TYPES
@@ -358,6 +365,7 @@ function BrazeInit(config as object, messagePort as object)
         eventHandler = Braze()._privateApi.eventHandler
         storage = Braze()._privateApi.storage
         utils = Braze()._privateApi.brazeUtils
+        brazelogger = Braze()._privateApi.brazeLogger
         m.cachedConfig = {}
         stored_config_time = storage.brazeReadDataInt(BrazeConstants().BRAZE_STORAGE.CONFIG_TIME_KEY, BrazeConstants().BRAZE_STORAGE.CONFIG_SECTION)
         config_object = eventHandler.createConfigObject(stored_config_time, true)
@@ -558,10 +566,10 @@ function BrazeInit(config as object, messagePort as object)
       if input = invalid or input = ""
         return true
       end if
-      len = Len(input)
+      input_len = Len(input)
       ' The Mid function is 1-indexed, not 0-indexed
       ' https://developer.roku.com/docs/references/brightscript/language/global-string-functions.md#mids-as-string-p-as-integer-n-as-integer-as-string
-      for i = 1 to len step 1
+      for i = 1 to input_len step 1
         if Mid(input, i, 1) <> " "
           return false
         end if
@@ -919,7 +927,7 @@ function BrazeInit(config as object, messagePort as object)
     end function,
 
     toColor: function(s as object) as dynamic
-      if s = invalid 
+      if s = invalid
         return invalid
       end if
       hex = stri(s, 16)
@@ -936,6 +944,11 @@ function BrazeInit(config as object, messagePort as object)
     end function,
 
     logMessage: function(tag as string, message as string) as void
+      if Braze()._privateApi.config[BrazeConstants().BRAZE_CONFIG_FIELDS.LOGGING_ENABLED] = false then return
+      m._doPrint(tag, message)
+    end function,
+
+    _doPrint: function(tag as string, message as string) as void
       print "Braze Roku SDK v" + BrazeConstants().SDK_DATA.SDK_VERSION + " - " + tag + " - " + message
     end function
   }
@@ -1163,7 +1176,7 @@ function BrazeInit(config as object, messagePort as object)
           msg = wait(0, port)
           if (type(msg) = "roUrlEvent")
             code = msg.GetResponseCode()
-            return msg.getString()
+            return msg.GetString()
           end if
           if (msg = invalid)
             request.AsyncCancel()
@@ -1394,6 +1407,7 @@ function BrazeInit(config as object, messagePort as object)
       brazelogger = m._privateApi.brazeLogger
       feature_flags_raw = getBrazeTask().BrazeFeatureFlags
       ffId = args.ffId
+      fts = invalid
 
       for each ff in feature_flags_raw
         if ff.id = ffId
@@ -1404,15 +1418,15 @@ function BrazeInit(config as object, messagePort as object)
 
       if fts <> invalid
         if m._privateapi.dataprovider.cachedconfig.feature_flags_sent_ffi[fts] <> invalid
-          brazeLogger.debug("Not logging a feature flag impression. Was already logged once this session.", FormatJson(args))
+          brazelogger.debug("Not logging a feature flag impression. Was already logged once this session.", FormatJson(args))
         else
           m._privateapi.dataprovider.cachedconfig.feature_flags_sent_ffi[fts] = 1
           event_object = m._privateApi.eventHandler.createFeatureFlagImpressionEvent(ffId, fts)
-          brazeLogger.debug("Logging a feature flag impression. ", FormatJson(args))
+          brazelogger.debug("Logging a feature flag impression. ", FormatJson(args))
           m._privateApi.eventHandler.logEvent(event_object)  
         end if
       else 
-        brazeLogger.debug("Not logging a feature flag impression. The feature flag was not part of any matching campaign", FormatJson(args))
+        brazelogger.debug("Not logging a feature flag impression. The feature flag was not part of any matching campaign", FormatJson(args))
       end if
     end function,
 
@@ -1516,7 +1530,7 @@ function BrazeInit(config as object, messagePort as object)
     timeUtils: TimeUtils
     networkUtil: NetworkUtil
     brazeLogger: BrazeLogger
-    eventHandler: eventHandler
+    eventHandler: EventHandler
     brazeUtils: BrazeUtils
   }
 
@@ -1771,10 +1785,281 @@ function getBrazeInstance(task as object) as object
     end function,
   }
 
+  ' Observe on the calling Scene (render thread) so the SDK can attach UI when
+  ' BrazeTask publishes an in-app message. getBrazeInstance() must be called from the Scene.
+  ' Register now even if brazeConfig is not on global yet: Scene init() runs during
+  ' CreateScene(), and apps typically write brazeConfig afterward. The display flag is
+  ' checked when a message arrives, not at registration time.
+  m.brazeTaskForInAppMessage = task
+  BrazeRegisterInAppMessageObserver(task)
+
   brazeInstance.callInstanceMethod("sessionEnd", {})
   brazeInstance.callInstanceMethod("sessionStart", {})
   return brazeInstance
 end function
+
+function BrazeRegisterInAppMessageObserver(task as object) as boolean
+  if task = invalid then return false
+  if GetInterface(task, "ifSGNodeField") = invalid then return false
+  ' Scoped so apps observing BrazeInAppMessage for custom UI keep their observers.
+  task.unobserveFieldScoped("BrazeInAppMessage")
+  task.observeFieldScoped("BrazeInAppMessage", "BrazeOnInAppMessageReceived")
+  return true
+end function
+
+function BrazeIsAutomaticInAppMessageDisplayEnabled() as boolean
+  if m.global <> invalid and m.global.brazeConfig <> invalid
+    if m.global.brazeConfig[BrazeConstants().BRAZE_CONFIG_FIELDS.AUTOMATIC_IAM_DISPLAY] = true
+      return true
+    end if
+  end if
+  return false
+end function
+
+function BrazeCreateDefaultInAppMessageNode() as object
+  return createObject("roSGNode", "BrazeDefaultInAppMessage")
+end function
+
+function BrazeNodeHasField(node as object, field_name as string) as boolean
+  if node = invalid then return false
+  if GetInterface(node, "ifSGNodeField") <> invalid then return node.hasField(field_name) = true
+  if node.hasField = invalid then return false
+  return node.hasField(field_name) = true
+end function
+
+' createObject succeeding is not enough to treat the node as the SDK overlay.
+function BrazeIsSdkInAppMessageUi(dialog as object) as boolean
+  if not BrazeNodeHasField(dialog, "isClosed") then return false
+  if not BrazeNodeHasField(dialog, "pendingClickEvent") then return false
+  return true
+end function
+
+function BrazeIsDefaultInAppMessageUiAvailable() as boolean
+  if m.brazeDefaultIamUiAvailable <> invalid then return m.brazeDefaultIamUiAvailable
+  dialog = BrazeCreateDefaultInAppMessageNode()
+  m.brazeDefaultIamUiAvailable = BrazeIsSdkInAppMessageUi(dialog)
+  if not m.brazeDefaultIamUiAvailable then BrazeLogInAppMessageError(BrazeGetMissingDefaultInAppMessageUiLogMessage())
+  return m.brazeDefaultIamUiAvailable
+end function
+
+function BrazeGetMissingDefaultInAppMessageUiLogMessage() as string
+  return "BrazeDefaultInAppMessage component not found, so the default UI is skipped. Add the BrazeDefaultInAppMessage files to components/ or leave automatic_iam_display unset."
+end function
+
+function BrazeIsInAppMessageDisplayable(in_app_message as object) as boolean
+  return in_app_message <> invalid and in_app_message.message <> invalid
+end function
+
+function BrazeIsSupportedAutomaticInAppMessageType(message_type as dynamic) as boolean
+  if message_type = invalid then return false
+  for each supported_type in BrazeConstants().IAM_AUTOMATIC_DISPLAY_TYPES
+    if message_type = supported_type then return true
+  end for
+  return false
+end function
+
+function BrazeGetUnsupportedInAppMessageLogMessage(message_type as dynamic) as string
+  type_name = "unknown"
+  if message_type <> invalid then type_name = message_type.ToStr()
+  return "type " + type_name + " is not supported. Only MODAL in-app messages are displayed."
+end function
+
+sub BrazeLogUnsupportedInAppMessageType(message_type as dynamic)
+  BrazeLogInAppMessageError(BrazeGetUnsupportedInAppMessageLogMessage(message_type))
+end sub
+
+sub BrazeLogInAppMessageError(log_message as string)
+  ' Do not call Braze() here: BrazeInit stores the instance on the Task thread,
+  ' and this runs from the Scene-thread IAM observer.
+  if m.global <> invalid and m.global.brazeConfig <> invalid
+    if m.global.brazeConfig[BrazeConstants().BRAZE_CONFIG_FIELDS.LOGGING_ENABLED] = false then return
+  end if
+  print "Braze Roku SDK v" + BrazeConstants().SDK_DATA.SDK_VERSION + " - ERROR: in-app message - " + log_message
+end sub
+
+function BrazeGetInAppMessageDisplayDelay(in_app_message as object) as integer
+  if in_app_message = invalid then return 0
+  delay = in_app_message.display_delay
+  if delay = invalid or delay <= 0 then return 0
+  return delay
+end function
+
+' Size of the Scene's coordinate space, which comes from the manifest ui_resolutions and the device.
+' roDeviceInfo.GetUIResolution() is the device UI resolution instead, so it can differ from this
+' (for example an HD-only channel on an FHD device). Falls back to the given defaults.
+function BrazeGetScreenSize(scene as dynamic, default_width as integer, default_height as integer) as object
+  size = { width: default_width, height: default_height }
+  if scene = invalid then return size
+  design = scene.currentDesignResolution
+  if design = invalid then return size
+  if design.width = invalid or design.height = invalid then return size
+  if design.width <= 0 or design.height <= 0 then return size
+  size.width = design.width
+  size.height = design.height
+  return size
+end function
+
+sub BrazeCancelPendingInAppMessage()
+  m.brazePendingInAppMessage = invalid
+  if m.brazeInAppMessageDelayTimer <> invalid
+    m.brazeInAppMessageDelayTimer.control = "stop"
+    m.brazeInAppMessageDelayTimer = invalid
+  end if
+end sub
+
+sub BrazeOnInAppMessageReceived()
+  task = m.brazeTaskForInAppMessage
+  if task = invalid then return
+
+  in_app_message = task.BrazeInAppMessage
+  if in_app_message = invalid then return
+  if not BrazeIsAutomaticInAppMessageDisplayEnabled() then return
+  ' No BrazeDefaultInAppMessage component in the channel: leave the field for custom UI.
+  if not BrazeIsDefaultInAppMessageUiAvailable() then return
+
+  if not BrazeIsSupportedAutomaticInAppMessageType(in_app_message.message_type)
+    task.BrazeInAppMessage = invalid
+    BrazeLogUnsupportedInAppMessageType(in_app_message.message_type)
+    return
+  end if
+
+  if not BrazeIsInAppMessageDisplayable(in_app_message)
+    task.BrazeInAppMessage = invalid
+    return
+  end if
+
+  BrazeCancelPendingInAppMessage()
+
+  ' Delay first, then custom handler or default dialog, so dashboard delay
+  ' applies to intercepted layouts as well.
+  delay = BrazeGetInAppMessageDisplayDelay(in_app_message)
+  if delay > 0
+    m.brazePendingInAppMessage = in_app_message
+    timer = createObject("roSGNode", "Timer")
+    timer.duration = delay
+    timer.observeField("fire", "BrazeShowPendingInAppMessage")
+    timer.control = "start"
+    m.brazeInAppMessageDelayTimer = timer
+    task.BrazeInAppMessage = invalid
+    return
+  end if
+
+  BrazePresentInAppMessage(in_app_message)
+  task.BrazeInAppMessage = invalid
+end sub
+
+sub BrazeShowPendingInAppMessage()
+  in_app_message = m.brazePendingInAppMessage
+  BrazeCancelPendingInAppMessage()
+  BrazePresentInAppMessage(in_app_message)
+end sub
+
+sub BrazePresentInAppMessage(in_app_message as object)
+  if not BrazeIsInAppMessageDisplayable(in_app_message) then return
+  if not BrazeIsSupportedAutomaticInAppMessageType(in_app_message.message_type) then return
+
+  ' Detach before the custom hook so it replaces a visible default overlay and captures the app's focus.
+  BrazeDetachInAppMessage()
+
+  if m.top <> invalid and m.top.hasFunc("brazeHandleCustomInAppMessage")
+    handled = m.top.callFunc("brazeHandleCustomInAppMessage", in_app_message)
+    if handled = true then return
+  end if
+
+  BrazeAttachInAppMessage(in_app_message)
+end sub
+
+sub BrazeAttachInAppMessage(in_app_message as object)
+  if not BrazeIsInAppMessageDisplayable(in_app_message) then return
+  if m.top = invalid or not m.top.isSubtype("Scene") then return
+  if m.brazeTaskForInAppMessage = invalid then return
+
+  BrazeDetachInAppMessage()
+
+  dialog = BrazeCreateDefaultInAppMessageNode()
+  if not BrazeIsSdkInAppMessageUi(dialog) then return
+
+  m.brazeInAppMessageOldFocus = BrazeGetDeepestFocusedNode(m.top)
+  m.brazeInAppMessageNode = dialog
+  dialog.observeField("isClosed", "BrazeOnInAppMessageClosed")
+  dialog.BrazeTask = m.brazeTaskForInAppMessage
+  m.top.appendChild(dialog)
+  dialog.inappmessage = in_app_message
+  dialog.setFocus(true)
+  dialog.observeField("focusedChild", "BrazeOnInAppMessageFocusChanged")
+end sub
+
+' The overlay is a plain Scene child, so app setFocus calls can pull focus behind it.
+' Take focus back and restore to the app's latest target on close.
+sub BrazeOnInAppMessageFocusChanged()
+  node = m.brazeInAppMessageNode
+  if node = invalid or node.isClosed = true then return
+  if node.isInFocusChain() then return
+  ' Let the app's own Scene dialog keep focus while it's open.
+  if m.top.dialog <> invalid then return
+
+  focused = BrazeGetDeepestFocusedNode(m.top)
+  if focused <> invalid and not focused.isSameNode(m.top) then m.brazeInAppMessageOldFocus = focused
+  node.setFocus(true)
+end sub
+
+function BrazeGetDeepestFocusedNode(node as object) as object
+  if node = invalid then return invalid
+  child = node.focusedChild
+  if child = invalid or child.isSameNode(node) then return node
+  return BrazeGetDeepestFocusedNode(child)
+end function
+
+sub BrazeOnInAppMessageClosed()
+  node = m.brazeInAppMessageNode
+  if node = invalid or node.isClosed <> true then return
+  clickEvent = node.pendingClickEvent
+  BrazeDetachInAppMessage()
+  ' Notify after detach so the app can move focus without the overlay restoring it.
+  BrazeNotifyInAppMessageClickEvent(clickEvent)
+end sub
+
+' The node that gets focus back when the overlay closes. A node the app removed while the overlay
+' was up can't take focus, so use the fallback instead (usually the Scene).
+function BrazeGetFocusRestoreTarget(old_focus as dynamic, fallback as dynamic) as dynamic
+  if old_focus = invalid then return invalid
+  if old_focus.getScene() = invalid then return fallback
+  return old_focus
+end function
+
+sub BrazeDetachInAppMessage()
+  node = m.brazeInAppMessageNode
+  if node <> invalid
+    node.unobserveField("isClosed")
+    node.unobserveField("focusedChild")
+    if m.top <> invalid then m.top.removeChild(node)
+    m.brazeInAppMessageNode = invalid
+  end if
+  oldFocus = m.brazeInAppMessageOldFocus
+  m.brazeInAppMessageOldFocus = invalid
+  target = BrazeGetFocusRestoreTarget(oldFocus, m.top)
+  if target <> invalid then target.setFocus(true)
+end sub
+
+function BrazeBuildInAppMessageClickEvent(in_app_message as object, button_index as integer) as object
+  event = {
+    in_app_message: in_app_message,
+    button: invalid,
+    button_index: button_index
+  }
+  if in_app_message <> invalid and in_app_message.buttons <> invalid and button_index >= 0
+    if in_app_message.buttons.Count() > button_index
+      event.button = in_app_message.buttons[button_index]
+    end if
+  end if
+  return event
+end function
+
+sub BrazeNotifyInAppMessageClickEvent(event as object)
+  if event = invalid or event.in_app_message = invalid then return
+  if m.top = invalid or not m.top.hasFunc("brazeHandleInAppMessageClick") then return
+  m.top.callFunc("brazeHandleInAppMessageClick", event)
+end sub
 
 function LogInAppMessageImpression(id as string, brazetask) as void
   payload = {}

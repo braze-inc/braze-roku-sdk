@@ -2,6 +2,10 @@
 <!--********** Copyright 2020 Roku Corp.  All Rights Reserved. **********-->
 
 <component name="MainScene" extends="Scene">
+    <interface>
+        <function name="brazeHandleCustomInAppMessage" />
+        <function name="brazeHandleInAppMessageClick" />
+    </interface>
     <script type="text/brightscript" uri="MainScene.brs" />
     <script type="text/brightscript" uri="pkg:/source/utils.brs" />
     <script type="text/brightscript" uri="UILogic/VideoPlayerLogic.brs" />
